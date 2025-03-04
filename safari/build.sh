@@ -1,5 +1,6 @@
 #!/bin/sh
-
+#exit on errors
+set -e
 source ./env
 cat <<EOF | envsubst > ./ExportOptions.plist
 <?xml version="1.0" encoding="UTF-8"?>
@@ -7,7 +8,7 @@ cat <<EOF | envsubst > ./ExportOptions.plist
 <plist version="1.0">
 <dict>
     <key>method</key>
-    <string>app-store</string>
+    <string>app-store-connect</string>
     <key>teamID</key>
     <string>$TEAM_ID</string>
     <key>signingCertificate</key>
@@ -42,9 +43,10 @@ echo "Building macOS"
 xcodebuild build -project AboveVTT.xcodeproj -scheme "AboveVTT (macOS)" -destination 'generic/platform=macOS' -configuration Release
 xcodebuild archive -project AboveVTT.xcodeproj -scheme "AboveVTT (macOS)" -archivePath ./build/AboveVTT-mac.xcarchive -destination 'generic/platform=macOS' -configuration Release
 
-echo "Do we have signing; also check $KEYCHAIN_PATH"
+echo "DEBUG: Check what signing"
 security find-identity -v -p codesigning
-security find-identity -v -p codesigning $KEYCHAIN_PATH
+echo "Export plist:"
+cat ExportOptions.plist
 
 echo "Export iOS"
 xcodebuild -exportArchive -archivePath ./build/AboveVTT-ios.xcarchive -exportPath ./build -exportOptionsPlist ExportOptions.plist -verbose
@@ -58,11 +60,12 @@ xcrun notarytool submit ./build/AboveVTT.ipa --keychain-profile "appstoreconnect
 echo "Notarizing macOS"
 xcrun notarytool submit ./build/AboveVTT.pkg --keychain-profile "appstoreconnect" --wait
 
+
 echo "Uploading iOS"
-xcrun altool --upload-app -f ./build/AboveVTT.ipa -t ios --apiKey $APP_STORE_CONNECT_API_KEY_ID --apiIssuer $APP_STORE_CONNECT_API_ISSUER_ID
+#skip for test: xcrun altool --upload-app -f ./build/AboveVTT.ipa -t ios --apiKey $APP_STORE_CONNECT_API_KEY_ID --apiIssuer $APP_STORE_CONNECT_API_ISSUER_ID
 
 echo "Uploading macOS"
-xcrun altool --upload-app -f ./build/AboveVTT.pkg -t macos --apiKey $APP_STORE_CONNECT_API_KEY_ID --apiIssuer $APP_STORE_CONNECT_API_ISSUER_ID
+#skip for test: xcrun altool --upload-app -f ./build/AboveVTT.pkg -t macos --apiKey $APP_STORE_CONNECT_API_KEY_ID --apiIssuer $APP_STORE_CONNECT_API_ISSUER_ID
 
 echo "Completed"
 
