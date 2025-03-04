@@ -1,6 +1,5 @@
 #!/bin/sh
-#exit on errors
-set -e
+
 source ./env
 cat <<EOF | envsubst > ./ExportOptions.plist
 <?xml version="1.0" encoding="UTF-8"?>
@@ -34,6 +33,9 @@ rm -r build/*.pkg build/*.ipa build/*.xcarchive build/*.log build/*.plist
 
 xcodebuild clean -project AboveVTT.xcodeproj -scheme "AboveVTT (iOS)" -destination 'generic/platform=iOS' -configuration Release
 xcodebuild clean -project AboveVTT.xcodeproj -scheme "AboveVTT (macOS)" -destination 'generic/platform=macOS' -configuration Release
+
+#exit on errors
+set -e
 
 echo "Building iOS"
 xcodebuild build -project AboveVTT.xcodeproj -scheme "AboveVTT (iOS)" -destination 'generic/platform=iOS' -configuration Release
