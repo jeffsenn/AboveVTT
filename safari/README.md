@@ -49,6 +49,28 @@ You’ll need an API key to authenticate with App Store Connect.
  - For github actions: put the contents of that file into github secrets:
      `base64 P8FILE_YOU_DOWNLOADED | pbcopy` and paste to github
         
+This is what you need to put in github secrets for safari-release-build.yml.
+ - Choose a password (eg "p12pass123") - this goes into github secret `P12_PASSWORD`
+ - List the signing certs on your mac with:
+     `security find-identity -p codesigning -v`
+ - Ensure there is at least one "Apple Development" and one "Apple Distribution" cert
+ - Need to get this certificates into github secrets.
+ - Easiest way:
+    - open XCode -> Settings -> Accounts
+    - Choose your account on left (prob only 1), choose the org (NOT PERSONAL) on right
+    - Click "Manage Certificates"
+    -   Hopefully we see the certs there.  Need to right-click "Export Certificate" on
+        one each of "Apple Dev Cert" and "Apple Dist Cert". Use the P12_PASSWORD above to 
+        encrypt.  Save as two WHATEVER.p12 files
+ - Get those .p12 files into github secrets (order doesn't matter):
+ - `BUILD_CERTIFICATE_BASE64` and  `BUILD_CERTIFICATE2_BASE64`
+ - `base64 -i WHATEVER.p12 | pbcopy` and paste into github `BUILD_CERTIFICATE_BASE64`
+ - `base64 -i WHATEVER_2.p12 | pbcopy` and paste into github `BUILD_CERTIFICATE2_BASE64`
+ 
+Things that some people might consider sensitive but really are not:
+  Team ID - this can be found through various means including app store presence.
+  Provisioning Profiles - they are actually extractable directly from the .ipa file hosted by the store
+
 Note about building locally for testing on Mac (not iOS):
 
 Safari seems to get confused with multiple versions of extensions with
@@ -58,20 +80,5 @@ something with a random number in it (eg.  foo.bar.AboveVTT.debug33
 and foo.bar.AboveVTT.debug33.Extension) then it will work better.  The
 alternative is a lot of clearing of Safari Library caches.
 
-This is what you need to put in github secrets for safari-release-build.yml.
- - Choose a password (eg "p12pass123") - this goes into github secret `P12_PASSWORD`
- - List the signing certs on your mac with:
-     `security find-identity -p codesigning -v`
- - Ensure there is at least one "Apple Development" and one "Apple Distribution" cert
- - There should be a keychain called "distributionbackups"
- - Export the keychain and base64 encode to clipboard.  Use the password above to encrypt it.
-   `security export -k ~/Library/Keychains/disributionbackups.keychain -t certs -f pkcs12 -o certs.p12| base64 | pbcopy`
- - paste that value into the github secret `BUILD_CERTIFICATE_BASE64`
- - If that doesn't work - you can do this instead - but value might be too large for secrets
-   `security export -k ~/Library/Keychains/login.keychain-db -t certs -f pkcs12 -o certs.p12| base64 | pbcopy`
-
-Things that some people might consider sensitive but really are not:
-  Team ID - this can be found through various means including app store presence.
-  Provisioning Profiles - they are actually extractable directly from the .ipa file hosted by the store
   
    
