@@ -24,8 +24,8 @@ jobs:
           PP_PATH=~/Library/Developer/Xcode/UserData/Provisioning\ Profiles
           echo "move profiles to $PP_PATH"
           mkdir -p "$PP_PATH"
-          cp AboveVTTProvisionProfile.mobileprovision "$PP_PATH"
-          cp AboveVTTProvisionProfileExtension.mobileprovision "$PP_PATH"
+          cp *.mobileprovision "$PP_PATH"
+          cp *.provisionprofile "$PP_PATH"                    
           ls -al "$PP_PATH"
           echo "create keychain"
           security create-keychain -p "$P12_PASSWORD" "$KEYCHAIN_PATH"
