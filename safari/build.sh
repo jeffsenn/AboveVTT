@@ -10,6 +10,8 @@ cat <<EOF | envsubst > ./ExportOptions.plist
     <string>app-store</string>
     <key>teamID</key>
     <string>$TEAM_ID</string>
+    <key>signingCertificate</key>
+    <string>Apple Distribution</string>
     <key>uploadBitcode</key>
     <true/>
     <key>uploadSymbols</key>
