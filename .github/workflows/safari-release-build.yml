@@ -18,8 +18,8 @@ jobs:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           BUILD_CERTIFICATE2_BASE64: ${{ secrets.BUILD_CERTIFICATE2_BASE64 }}          
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
         run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           PP_PATH=~/Library/MobileDevice/Provisioning\ Profiles
           echo "move profiles to $PP_PATH"
