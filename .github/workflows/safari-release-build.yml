@@ -21,7 +21,7 @@ jobs:
         run: |
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-          PP_PATH=~/Library/MobileDevice/Provisioning\ Profiles
+          PP_PATH=~/Library/Developer/Xcode/UserData/Provisioning\ Profiles
           echo "move profiles to $PP_PATH"
           mkdir -p "$PP_PATH"
           cp AboveVTTProvisionProfile.mobileprovision "$PP_PATH"
@@ -36,7 +36,8 @@ jobs:
           security import "$CERTIFICATE_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
           echo -n "$BUILD_CERTIFICATE2_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
           security import "$CERTIFICATE_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          security set-key-partition-list -S apple-tool:,apple: -k "$P12_PASSWORD" "$KEYCHAIN_PATH"
+          # this command keeps the keychain unlocked for apple tools
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -k "$P12_PASSWORD" "$KEYCHAIN_PATH"
           security list-keychain -d user -s "$KEYCHAIN_PATH"
           echo "setup app store connect"
           echo "$APP_STORE_CONNECT_API_KEY" | base64 -d > AuthKey.p8
