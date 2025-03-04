@@ -45,5 +45,7 @@ jobs:
         working-directory: safari
         
       - name: Run build script
+        env:
+          KEYCHAIN_PATH:$RUNNER_TEMP/app-signing.keychain-db
         run: ./build.sh
         working-directory: safari
