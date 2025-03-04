@@ -16,7 +16,8 @@ jobs:
         env:
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
-          BUILD_CERTIFICATE2_BASE64: ${{ secrets.BUILD_CERTIFICATE2_BASE64 }}          
+          BUILD_CERTIFICATE2_BASE64: ${{ secrets.BUILD_CERTIFICATE2_BASE64 }}
+          BUILD_CERTIFICATE3_BASE64: ${{ secrets.BUILD_CERTIFICATE3_BASE64 }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
         run: |
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
@@ -35,6 +36,8 @@ jobs:
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
           security import "$CERTIFICATE_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
           echo -n "$BUILD_CERTIFICATE2_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
+          security import "$CERTIFICATE_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          echo -n "$BUILD_CERTIFICATE3_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
           security import "$CERTIFICATE_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
           # this command keeps the keychain unlocked for apple tools
           security set-key-partition-list -S apple-tool:,apple:,codesign: -k "$P12_PASSWORD" "$KEYCHAIN_PATH"
