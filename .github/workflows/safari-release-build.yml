@@ -16,23 +16,21 @@ jobs:
         env:
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          BUILD_CERTIFICATE2_BASE64: ${{ secrets.BUILD_CERTIFICATE2_BASE64 }}          
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
         run: |
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           PP_PATH=~/Library/MobileDevice/Provisioning\ Profiles
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          echo "move profiles"
+          echo "move profiles to $PP_PATH"
           mkdir -p "$PP_PATH"
           cp AboveVTTProvisionProfile.mobileprovision "$PP_PATH"
           cp AboveVTTProvisionProfileExtension.mobileprovision "$PP_PATH"
+          ls -al "$PP_PATH"
           echo "import certificate secrets"
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
-          echo "create keychain"
-          security create-keychain -p "$P12_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$P12_PASSWORD" "$KEYCHAIN_PATH"
-          echo "import certs"
-          security import "$CERTIFICATE_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12
+          echo -n "$BUILD_CERTIFICATE2_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
+          security import "$CERTIFICATE_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12
           # security set-key-partition-list -S apple-tool:,apple: -k "$P12_PASSWORD" "$KEYCHAIN_PATH"
           # security list-keychain -d user -s "$KEYCHAIN_PATH"
           echo "setup app store connect"
