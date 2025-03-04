@@ -19,9 +19,9 @@ cat <<EOF | envsubst > ./ExportOptions.plist
     <key>provisioningProfiles</key>
     <dict>
         <key>$BUNDLE_ID</key>
-        <string>AboveVTTProvisioningProfile</string>
+        <string>XC org senns AboveVTT</string>
         <key>$BUNDLE_ID.Extension</key>
-        <string>AboveVTTProvisioningProfileExtension</string>
+        <string>XC org senns AboveVTT Extension</string>
     </dict>
 </dict>
 </plist>
