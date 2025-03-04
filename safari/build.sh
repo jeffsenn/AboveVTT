@@ -10,21 +10,10 @@ cat <<EOF | envsubst > ./ExportOptions.plist
     <string>app-store-connect</string>
     <key>teamID</key>
     <string>$TEAM_ID</string>
-    <key>signingStyle</key>
-    <string>manual</string>
-    <key>signingCertificate</key>
-    <string>Apple Distribution</string>
     <key>uploadBitcode</key>
     <true/>
     <key>uploadSymbols</key>
     <true/>
-    <key>provisioningProfiles</key>
-    <dict>
-        <key>$BUNDLE_ID</key>
-        <string>AboveVTTProvisionProfile</string>
-        <key>$BUNDLE_ID.Extension</key>
-        <string>AboveVTTProvisionProfileExtension</string>
-    </dict>
 </dict>
 </plist>
 EOF
