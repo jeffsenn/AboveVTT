@@ -1,4 +1,4 @@
-#remember: pip install pyjwt cryptography
+#remember: pip install pyjwt cryptography requests
 import jwt
 import time
 import requests

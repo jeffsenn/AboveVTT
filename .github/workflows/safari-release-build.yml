@@ -50,7 +50,7 @@ jobs:
         
       - name: Update Build Number
         run: |
-             pip install pyjwt cryptography
+             pip install pyjwt cryptography requests
              python calc_testflight_next_version.py 
         env:      
           PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY }}      
