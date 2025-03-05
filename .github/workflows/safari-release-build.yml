@@ -48,6 +48,14 @@ jobs:
           rm AuthKey.p8
         working-directory: safari
         
+      - name: Update Build Number
+        run: -
+             pip install pyjwt cryptography
+             python calc_testflight_next_version.py 
+        env:      
+          PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY }}      
+        working-directory: safari
+        
       - name: Run build script
         run: ./build.sh
         working-directory: safari
