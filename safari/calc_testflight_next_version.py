@@ -4,6 +4,8 @@ import time
 import requests
 import os
 import base64
+import subprocess
+
 env = dict([a.split("=",1) for a in open('env').read().strip().split('\n')])
 
 def generate_token():
@@ -22,9 +24,8 @@ def generate_token():
     return token
 
 # Fetch latest TestFlight version
-def fetch_latest_testflight_version():
-    token = generate_token()
-    url = f"https://api.appstoreconnect.apple.com/v1/builds?filter[app]={env['APP_ID']}&sort=-version"
+def fetch_latest_testflight_version(token, app_id):
+    url = f"https://api.appstoreconnect.apple.com/v1/builds?filter[app]={app_id}&sort=-version"
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json"
@@ -37,11 +38,30 @@ def fetch_latest_testflight_version():
         if builds:
             latest_build = builds[0]  # First item is the latest version
             version = latest_build["attributes"]["version"]
-            print(int(version)+1)
+            return int(version)
     else:
         raise Exception(f"Error fetching data: {response.status_code} - {response.text}")
 
+def find_app(token, bundle):
+    url = f"https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]={bundle}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json"
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        apps = response.json().get("data", [])
+        if apps:
+            return apps[0]['id']
+        raise Exception("No app found")
+    else:
+        raise Exception(f"Error fetching data: {response.status_code} - {response.text}")
+
+    
 # Run the script
 if __name__ == "__main__":
-    fetch_latest_testflight_version()
-    
+    token = generate_token()
+    app_id = find_app(token, env["BUNDLE_ID"])
+    v = fetch_latest_testflight_version(token,app_id) + 1
+    result = subprocess.run(["agvtool", "new-version", "-all", str(v)], capture_output=True, text=True)
+    print(result.stdout)
