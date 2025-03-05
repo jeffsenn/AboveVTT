@@ -49,7 +49,7 @@ jobs:
         working-directory: safari
         
       - name: Update Build Number
-        run: -
+        run: |
              pip install pyjwt cryptography
              python calc_testflight_next_version.py 
         env:      
