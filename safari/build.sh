@@ -46,21 +46,20 @@ cat ExportOptions.plist
 echo "Export iOS"
 xcodebuild -exportArchive -archivePath ./build/AboveVTT-ios.xcarchive -exportPath ./build -exportOptionsPlist ExportOptions.plist -verbose
 
-echo "Export macOS"
-xcodebuild -exportArchive -archivePath ./build/AboveVTT-mac.xcarchive -exportPath ./build -exportOptionsPlist ExportOptions.plist -verbose
-
 echo "Notarizing iOS"
 xcrun notarytool submit ./build/AboveVTT.ipa --keychain-profile "appstoreconnect" --wait
+
+echo "Uploading iOS"
+xcrun altool --upload-app -f ./build/AboveVTT.ipa -t ios --apiKey $APP_STORE_CONNECT_API_KEY_ID --apiIssuer $APP_STORE_CONNECT_API_ISSUER_ID
+
+echo "Export macOS"
+xcodebuild -exportArchive -archivePath ./build/AboveVTT-mac.xcarchive -exportPath ./build -exportOptionsPlist ExportOptions.plist -verbose
 
 echo "Notarizing macOS"
 xcrun notarytool submit ./build/AboveVTT.pkg --keychain-profile "appstoreconnect" --wait
 
-
-echo "Uploading iOS"
-#skip for test: xcrun altool --upload-app -f ./build/AboveVTT.ipa -t ios --apiKey $APP_STORE_CONNECT_API_KEY_ID --apiIssuer $APP_STORE_CONNECT_API_ISSUER_ID
-
 echo "Uploading macOS"
-#skip for test: xcrun altool --upload-app -f ./build/AboveVTT.pkg -t macos --apiKey $APP_STORE_CONNECT_API_KEY_ID --apiIssuer $APP_STORE_CONNECT_API_ISSUER_ID
+xcrun altool --upload-app -f ./build/AboveVTT.pkg -t macos --apiKey $APP_STORE_CONNECT_API_KEY_ID --apiIssuer $APP_STORE_CONNECT_API_ISSUER_ID
 
 echo "Completed"
 
