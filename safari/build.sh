@@ -68,7 +68,7 @@ echo "Export plist:"
 cat ExportOptions.plist
 
 echo "----Export iOS"
-xcodebuild -exportArchive -archivePath ./build/AboveVTT-ios.xcarchive -exportPath ./build -exportOptionsPlist ExportOptions.plist -verbose $FIRST_TIME_OPTION
+xcodebuild -exportArchive -archivePath ./build/AboveVTT-ios.xcarchive -exportPath ./build -exportOptionsPlist ExportOptions.plist $FIRST_TIME_OPTION
 
 # this has to "upload" to get the file notarized -
 # however this is NOT the upload to the store/testflight yet.
@@ -77,6 +77,7 @@ xcrun notarytool submit ./build/AboveVTT.ipa --keychain-profile "appstoreconnect
 
 if [ "$1" == "UPLOAD" ]; then
     if [ -z "${!FIRST_TIME_OPTION}" ]; then
+        # this is the actual upload that matters for testflight/store        
         echo "----Uploading iOS"
         xcrun altool --upload-app -f ./build/AboveVTT.ipa -t ios --apiKey $APP_STORE_CONNECT_API_KEY_ID --apiIssuer $APP_STORE_CONNECT_API_ISSUER_ID
     else
@@ -85,9 +86,7 @@ if [ "$1" == "UPLOAD" ]; then
 fi
 
 echo "----Export macOS"
-SIGN=`security find-identity -v -p codesigning | grep "Apple Development: J" | head -1 | awk '-F"' '{print $2;}'`
-echo "Signing with: $SIGN"
-xcodebuild -exportArchive -archivePath ./build/AboveVTT-mac.xcarchive -exportPath ./build -exportOptionsPlist ExportOptions.plist -verbose  $FIRST_TIME_OPTION CODE_SIGN_IDENTITY="$SIGN"
+xcodebuild -exportArchive -archivePath ./build/AboveVTT-mac.xcarchive -exportPath ./build -exportOptionsPlist ExportOptions.plist $FIRST_TIME_OPTION
 
 # this has to "upload" to get the file notarized -
 # however this is NOT the upload to the store/testflight yet.
@@ -96,6 +95,7 @@ xcrun notarytool submit ./build/AboveVTT.pkg --keychain-profile "appstoreconnect
 
 if [ "$1" == "UPLOAD" ]; then
     if [ -z "${!FIRST_TIME_OPTION}" ]; then
+        # this is the actual upload that matters for testflight/store
         echo "----Uploading macOS"
         xcrun altool --upload-app -f ./build/AboveVTT.pkg -t macos --apiKey $APP_STORE_CONNECT_API_KEY_ID --apiIssuer $APP_STORE_CONNECT_API_ISSUER_ID
     else
