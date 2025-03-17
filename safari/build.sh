@@ -32,11 +32,6 @@ rm -r build/*.pkg build/*.ipa build/*.xcarchive build/*.log build/*.plist
 xcodebuild clean -project AboveVTT.xcodeproj -scheme "AboveVTT (iOS)" -destination 'generic/platform=iOS' -configuration Release
 xcodebuild clean -project AboveVTT.xcodeproj -scheme "AboveVTT (macOS)" -destination 'generic/platform=macOS' -configuration Release
 
-
-git status
-
-git describe tags
-
 # get from git tag if there is a nearby version tag
 if [ -z "$MARKETING_VERSION" ]; then
     V="`git describe --tags --abbrev=0`"
@@ -72,6 +67,8 @@ cat ExportOptions.plist
 echo "----Export iOS"
 xcodebuild -exportArchive -archivePath ./build/AboveVTT-ios.xcarchive -exportPath ./build -exportOptionsPlist ExportOptions.plist -verbose $FIRST_TIME_OPTION
 
+# this has to "upload" to get the file notarized -
+# however this is NOT the upload to the store/testflight yet.
 echo "----Notarizing iOS"
 xcrun notarytool submit ./build/AboveVTT.ipa --keychain-profile "appstoreconnect" --wait
 
@@ -85,8 +82,12 @@ if [ "$1" == "UPLOAD" ]; then
 fi
 
 echo "----Export macOS"
-xcodebuild -exportArchive -archivePath ./build/AboveVTT-mac.xcarchive -exportPath ./build -exportOptionsPlist ExportOptions.plist -verbose  $FIRST_TIME_OPTION
+SIGN=`security find-identity -v -p codesigning | grep "Apple Development" | tail -1 | awk '-F"' '{print $2;}'`
+echo "Signing with: $SIGN"
+xcodebuild -exportArchive -archivePath ./build/AboveVTT-mac.xcarchive -exportPath ./build -exportOptionsPlist ExportOptions.plist -verbose  $FIRST_TIME_OPTION CODE_SIGN_IDENTITY="$SIGN"
 
+# this has to "upload" to get the file notarized -
+# however this is NOT the upload to the store/testflight yet.
 echo "----Notarizing macOS"
 xcrun notarytool submit ./build/AboveVTT.pkg --keychain-profile "appstoreconnect" --wait
 
