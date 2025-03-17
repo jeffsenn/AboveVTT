@@ -9,9 +9,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        
-      - name: Fetch tags for Version info
-        run: git fetch --tags
+        with:
+            fetch-depth: 0  # :-( we need the tags for version numbering
         
       - name: Set Up Keys
         env:

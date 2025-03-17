@@ -64,6 +64,8 @@ xcodebuild archive -project AboveVTT.xcodeproj -scheme "AboveVTT (macOS)" -archi
 
 echo "----DEBUG: Check what signing"
 security find-identity -v -p codesigning
+security find-certificate -c "Apple Distribution" -Z 
+
 echo "Export plist:"
 cat ExportOptions.plist
 
