@@ -9,7 +9,10 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
+        
+      - name: Fetch tags for Version info
+        run: git fetch --tags
+        
       - name: Set Up Keys
         env:
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
