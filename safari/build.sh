@@ -32,14 +32,19 @@ rm -r build/*.pkg build/*.ipa build/*.xcarchive build/*.log build/*.plist
 xcodebuild clean -project AboveVTT.xcodeproj -scheme "AboveVTT (iOS)" -destination 'generic/platform=iOS' -configuration Release
 xcodebuild clean -project AboveVTT.xcodeproj -scheme "AboveVTT (macOS)" -destination 'generic/platform=macOS' -configuration Release
 
-#exit on errors
-set -e
+
+git status
+
+git describe tags
 
 # get from git tag if there is a nearby version tag
 if [ -z "$MARKETING_VERSION" ]; then
     V="`git describe --tags --abbrev=0`"
     [[ $V =~ ^[0-9]+\.[0-9]+.*$ ]] && MARKETING_VERSION="$V"
 fi
+#exit on errors
+set -e
+
 # or from manifest
 if [ -z "$MARKETING_VERSION" ]; then
     echo "Using Manifest version...."
