@@ -32,6 +32,9 @@ rm -r build/*.pkg build/*.ipa build/*.xcarchive build/*.log build/*.plist
 xcodebuild clean -project AboveVTT.xcodeproj -scheme "AboveVTT (iOS)" -destination 'generic/platform=iOS' -configuration Release
 xcodebuild clean -project AboveVTT.xcodeproj -scheme "AboveVTT (macOS)" -destination 'generic/platform=macOS' -configuration Release
 
+# I would love it if this worked - but it doesn't.  For some reason
+# github checkout is not fetching the tags - even when we ask it to
+
 # get from git tag if there is a nearby version tag
 if [ -z "$MARKETING_VERSION" ]; then
     V="`git describe --tags --abbrev=0`"
@@ -82,7 +85,7 @@ if [ "$1" == "UPLOAD" ]; then
 fi
 
 echo "----Export macOS"
-SIGN=`security find-identity -v -p codesigning | grep "Apple Development" | tail -1 | awk '-F"' '{print $2;}'`
+SIGN=`security find-identity -v -p codesigning | grep "Apple Development: J" | head -1 | awk '-F"' '{print $2;}'`
 echo "Signing with: $SIGN"
 xcodebuild -exportArchive -archivePath ./build/AboveVTT-mac.xcarchive -exportPath ./build -exportOptionsPlist ExportOptions.plist -verbose  $FIRST_TIME_OPTION CODE_SIGN_IDENTITY="$SIGN"
 
