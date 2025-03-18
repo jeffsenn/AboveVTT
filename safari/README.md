@@ -1,3 +1,11 @@
+To do a test build for personal use:
+
+-- open the Xcode project
+-- Choose iOS or Mac at the top and one of your devices
+-- Go to each target (4 of them) in build settings and choose your Personal Dev Team for "Team"
+-- Build and Run
+-- You will need to "trust" your personal team on each device as well
+
 To Setup up TestFlight and App store building:
 
 - Need a mac with Xcode and command line tools installed and selected

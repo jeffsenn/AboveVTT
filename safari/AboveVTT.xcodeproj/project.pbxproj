@@ -1030,7 +1030,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = MY_DEV_TEAM;
+				DEVELOPMENT_TEAM = TWXLP583P4;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "AboveVTT Extension";
@@ -1045,7 +1045,7 @@
 					"-framework",
 					SafariServices,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.something.AboveVTT.Extension;
+				PRODUCT_BUNDLE_IDENTIFIER = org.senns.AboveVTT.Extension;
 				PRODUCT_NAME = "AboveVTT Extension";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1060,7 +1060,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = MY_DEV_TEAM;
+				DEVELOPMENT_TEAM = TWXLP583P4;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "AboveVTT Extension";
@@ -1075,7 +1075,7 @@
 					"-framework",
 					SafariServices,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.something.AboveVTT.Extension;
+				PRODUCT_BUNDLE_IDENTIFIER = org.senns.AboveVTT.Extension;
 				PRODUCT_NAME = "AboveVTT Extension";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1093,7 +1093,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = MY_DEV_TEAM;
+				DEVELOPMENT_TEAM = TWXLP583P4;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "iOS (App)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = AboveVTT;
@@ -1113,7 +1113,7 @@
 					"-framework",
 					WebKit,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.something.AboveVTT;
+				PRODUCT_BUNDLE_IDENTIFIER = org.senns.AboveVTT;
 				PRODUCT_NAME = AboveVTT;
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1129,7 +1129,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = MY_DEV_TEAM;
+				DEVELOPMENT_TEAM = TWXLP583P4;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "iOS (App)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = AboveVTT;
@@ -1149,7 +1149,7 @@
 					"-framework",
 					WebKit,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.something.AboveVTT;
+				PRODUCT_BUNDLE_IDENTIFIER = org.senns.AboveVTT;
 				PRODUCT_NAME = AboveVTT;
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1165,7 +1165,7 @@
 				CODE_SIGN_ENTITLEMENTS = "macOS (Extension)/AboveVTT.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = MY_DEV_TEAM;
+				DEVELOPMENT_TEAM = TWXLP583P4;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "macOS (Extension)/Info.plist";
@@ -1181,7 +1181,7 @@
 					"-framework",
 					SafariServices,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.something.AboveVTT.Extension;
+				PRODUCT_BUNDLE_IDENTIFIER = org.senns.AboveVTT.Extension;
 				PRODUCT_NAME = "AboveVTT Extension";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -1196,7 +1196,7 @@
 				CODE_SIGN_ENTITLEMENTS = "macOS (Extension)/AboveVTT.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = MY_DEV_TEAM;
+				DEVELOPMENT_TEAM = TWXLP583P4;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "macOS (Extension)/Info.plist";
@@ -1212,7 +1212,7 @@
 					"-framework",
 					SafariServices,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.something.AboveVTT.Extension;
+				PRODUCT_BUNDLE_IDENTIFIER = org.senns.AboveVTT.Extension;
 				PRODUCT_NAME = "AboveVTT Extension";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -1229,7 +1229,7 @@
 				CODE_SIGN_ENTITLEMENTS = "macOS (App)/AboveVTT.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = MY_DEV_TEAM;
+				DEVELOPMENT_TEAM = TWXLP583P4;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "macOS (App)/Info.plist";
@@ -1247,7 +1247,7 @@
 					"-framework",
 					WebKit,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.something.AboveVTT;
+				PRODUCT_BUNDLE_IDENTIFIER = org.senns.AboveVTT;
 				PRODUCT_NAME = AboveVTT;
 				SDKROOT = macosx;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1263,7 +1263,7 @@
 				CODE_SIGN_ENTITLEMENTS = "macOS (App)/AboveVTT.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = MY_DEV_TEAM;
+				DEVELOPMENT_TEAM = TWXLP583P4;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "macOS (App)/Info.plist";
@@ -1281,7 +1281,7 @@
 					"-framework",
 					WebKit,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.something.AboveVTT;
+				PRODUCT_BUNDLE_IDENTIFIER = org.senns.AboveVTT;
 				PRODUCT_NAME = AboveVTT;
 				SDKROOT = macosx;
 				SWIFT_EMIT_LOC_STRINGS = YES;
