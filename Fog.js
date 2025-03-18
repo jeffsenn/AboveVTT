@@ -260,7 +260,7 @@ class WaypointManagerClass {
 		}
 
 		rulerContainer.innerHTML = "";
-		if (window.PEER_TOKEN_DRAGGING[playerId]) {
+		if (window.PEER_TOKEN_DRAGGING != undefined && window.PEER_TOKEN_DRAGGING[playerId]) {
 	        const html = window.PEER_TOKEN_DRAGGING[playerId];
 	        delete window.PEER_TOKEN_DRAGGING[playerId];
 	        $(html).remove();
@@ -521,7 +521,7 @@ class WaypointManagerClass {
 
 			this.throttleDraw(function(){
 				self.draw(undefined, undefined, alpha, playerID)
-				if (window.PEER_TOKEN_DRAGGING[self.playerId]) {
+				if (window.PEER_TOKEN_DRAGGING != undefined && window.PEER_TOKEN_DRAGGING[self.playerId]) {
 			        const html = window.PEER_TOKEN_DRAGGING[self.playerId];
 			        $(html).css('opacity', 0.5 * alpha);
 		      	}
@@ -2067,6 +2067,8 @@ function door_note_icon(id){
 							window.JOURNAL.translateHtmlAndBlocks(tooltipHtml);	
 							add_journal_roll_buttons(tooltipHtml);
 							window.JOURNAL.add_journal_tooltip_targets(tooltipHtml);
+							add_stat_block_hover(tooltipHtml);
+							add_aoe_statblock_click(tooltipHtml);
 				            flyout.append(tooltipHtml);
 				            let sendToGamelogButton = $(`<a class="ddbeb-button" href="#">Send To Gamelog</a>`);
 				            sendToGamelogButton.css({ "float": "right" });

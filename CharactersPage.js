@@ -1285,6 +1285,7 @@ function observe_character_sheet_changes(documentToObserve) {
       })
       snippets.each(function(){
         add_journal_roll_buttons($(this));
+        add_aoe_statblock_click($(this), `/profile/${window.myUser}/characters/${window.PLAYER_ID}`);
       })
     }
 
@@ -1340,6 +1341,7 @@ function observe_character_sheet_changes(documentToObserve) {
     if(extras_stats.length>0){
       extras_stats.addClass("above-vtt-visited");   
       scan_player_creature_pane($(extras_stats));
+      add_aoe_statblock_click($(extras_stats));
     }
 
 
@@ -1891,7 +1893,8 @@ function observe_character_sheet_changes(documentToObserve) {
               }
               .ct-character-sheet__inner button.avtt-roll-button,
               .ct-sidebar__inner .integrated-dice__container,
-              .ct-sidebar__inner .avtt-roll-button{
+              .ct-sidebar__inner .avtt-roll-button,
+              .ct-sidebar__inner .avtt-aoe-button{
                   /* lifted from DDB encounter stat blocks  */
                   color: var(--theme-contrast, #b43c35) !important;
                   background: transparent !important;
@@ -1904,32 +1907,39 @@ function observe_character_sheet_changes(documentToObserve) {
               }
               .ct-character-sheet__inner button.avtt-roll-button:hover,
               .ct-sidebar__inner .integrated-dice__container:hover,
-              .ct-sidebar__inner .avtt-roll-button:hover{
+              .ct-sidebar__inner .avtt-roll-button:hover,
+              .ct-sidebar__inner .avtt-aoe-button:hover {
                 background: var(--theme-transparent, #ced9e0) !important;
               }
               .ct-sidebar__inner .integrated-dice__container, 
-              .ct-sidebar__inner .avtt-roll-button{
+              .ct-sidebar__inner .avtt-roll-button,
+              .ct-sidebar__inner .avtt-aoe-button{
                   font-size:12px;
                   line-height:10px;
                   padding:2px 2px 1px 2px;
               }    
-              .ct-sidebar__inner .stat-block .avtt-roll-button{
+              .ct-sidebar__inner .stat-block .avtt-roll-button,
+              .ct-sidebar__inner .stat-block .avtt-aoe-button{
                   font-size:15px;
                   line-height:15px;
                   font-weight: unset;
               }
 
-              .ct-sidebar__inner .glc-game-log .abovevtt-sidebar-injected button.avtt-roll-button{
+              .ct-sidebar__inner .glc-game-log .abovevtt-sidebar-injected button.avtt-roll-button,
+              .ct-sidebar__inner .glc-game-log .abovevtt-sidebar-injected button.avtt-aoe-button{
                 color: rgb(92, 112, 128) !important;
               }
 
-              .ct-sidebar__inner .glc-game-log .abovevtt-sidebar-injected button.avtt-roll-button:hover{
+              .ct-sidebar__inner .glc-game-log .abovevtt-sidebar-injected button.avtt-roll-button:hover,
+              .ct-sidebar__inner .glc-game-log .abovevtt-sidebar-injected button.avtt-aoe-button:hover{
                 background: #ced9e0 !important;
               }
 
 
               .ct-sidebar__inner [class*='ddbc-creature-block'] .avtt-roll-button,
-              .ct-sidebar__inner [class*='styles_creatureBlock'] .avtt-roll-button{
+              .ct-sidebar__inner [class*='styles_creatureBlock'] .avtt-roll-button,
+              .ct-sidebar__inner [class*='styles_creatureBlock'] .avtt-aoe-button,
+              .ct-sidebar__inner [class*='ddbc-creature-block'] .avtt-aoe-button{
                   /* lifted from DDB encounter stat blocks  */
                   color: #b43c35 !important;
                   background: #fff !important;
