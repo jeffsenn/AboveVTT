@@ -168,31 +168,7 @@ body > div {
     padding: 2px 4px;
 }
 
-button[id$='-button']:hover,
-button[id$='_button']:hover,
-button[id^=peerVideo_]:hover,
-#combat_tracker > button:hover,
-body > button:hover,
-#addscene:hover,
-.scene button:hover,
-#combat_tracker_inside button:hover,
-#edit_dialog button:not(.rc-switch):hover,
-#edit_scene_form button:not(.rc-switch):hover,
-#mega_importer button:hover,
-#prewiz td button:hover,
-#wizard_popup button:hover,
-.top_menu button:hover,
-.monster_frame > button:hover,
-.stp-btn:hover,
-.player-actions button:hover,
-#add-party:hover,
-.importer_toggle:hover,
-#zoom_buttons button:hover,
-.GameLogEntry_Message__1GoY3 button:hover {
-    color: #333;
-    background-image: none;
-    background: #e6e6e6;
-}
+
 [class*='GameLogEntries'] [class*='Message-Collapsed-Other-Flex'] {
     padding: 8px 10px;
     color: rgb(92, 112, 128);
@@ -267,9 +243,7 @@ button.gamelog-to-everyone-button:hover {
     font-weight: 700;
     margin: -3px -3px;
 }
-.material-icons.button-icon:hover {
-    color: #fff;
-}
+
 
 
 .ddbc-tab-options--layout-pill .ddbc-tab-options__header-heading {
@@ -295,14 +269,12 @@ button .ddbc-tab-options__header-heading{
 button .ddbc-tab-options__header-heading .menu-option{
     width: 69px;
 }
+
 .ddbc-tab-options--layout-pill .ddbc-tab-options__header-heading--is-active {
     color: #fff;
     background-color: #c53131;
 }
-.ddbc-tab-options--layout-pill .ddbc-tab-options__header-heading:hover {
-    background-color: #5d5d5d;
-    color: #f2f2f2;
-}
+
 .ddbc-tab-options--layout-pill .ddbc-tab-options__header-heading svg path {
     fill: #838383
 }
@@ -11101,7 +11073,17 @@ div#playlistFields {
 .ct-sidebar .glc-game-log .stat-block .stats table tbody tr:hover button.avtt-roll-button{
     background-color: #fff;
 }
+.ct-sidebar__inner>[class*='styles_pane']>[class*='styles_content']{
+    padding: 0px; 
+}
 
+.ct-sidebar__inner>[class*='styles_pane']>[class*='styles_content'] .glc-game-log{
+    background: #FEFEFE;
+}
+
+.ct-sidebar__inner>[class*='styles_pane']>[class*='styles_content'][class*='styles_dark'] .glc-game-log{
+    background: #12181c;
+}
 .stat-block .mon-stat-block__attribute-label,
 .stat-block .mon-stat-block__attribute-data-value,
 .stat-block .mon-stat-block__tidbits span,
@@ -13500,6 +13482,8 @@ div#playlistFields {
 .mobileAVTTUI #sheet_resize_button{
     left: -195px !important;
 }
+
+
 /***Font Faces*****/
 @font-face {
     font-family: Scala Sans Offc;
@@ -13681,6 +13665,52 @@ div#playlistFields {
     #combat_tracker_inside button{
         display:none !important;
         
+    }  
+}
+/* hover for non-touch device */
+@media (pointer: fine) {
+    button[id$='-button']:hover,
+    button[id$='_button']:hover,
+    button[id^=peerVideo_]:hover,
+    #combat_tracker > button:hover,
+    body > button:hover,
+    #addscene:hover,
+    .scene button:hover,
+    #combat_tracker_inside button:hover,
+    #edit_dialog button:not(.rc-switch):hover,
+    #edit_scene_form button:not(.rc-switch):hover,
+    #mega_importer button:hover,
+    #prewiz td button:hover,
+    #wizard_popup button:hover,
+    .top_menu button:hover,
+    .monster_frame > button:hover,
+    .stp-btn:hover,
+    .player-actions button:hover,
+    #add-party:hover,
+    .importer_toggle:hover,
+    #zoom_buttons button:hover,
+    .GameLogEntry_Message__1GoY3 button:hover {
+        color: #333;
+        background-image: none;
+        background: #e6e6e6;
     }
     
+    .ddbc-tab-options--layout-pill .ddbc-tab-options__header-heading:hover {
+        background-color: #5d5d5d;
+        color: #f2f2f2;
+    }
+    .ddbc-tab-options--layout-pill .ddbc-tab-options__header-heading.ddbc-tab-options__header-heading--is-active:hover {
+        background-color: #c53131;
+        color: #fff;
+    }
+    .material-icons.button-icon:hover {
+        color: #fff;
+    }
+}
+/* remove hover tooltips for touch devices */
+@media (pointer: coarse) {
+  .hasTooltip::after,
+  .sidebar-hover-text-flyout{
+    display:none;
+  }
 }
