@@ -3839,6 +3839,18 @@ function drawRect(ctx, startx, starty, width, height, style, fill=true, lineWidt
 
 }
 
+function conePoly(startx, starty, endx, endy) {
+	const L = Math.sqrt(Math.pow(endx - startx, 2) + Math.pow(endy - starty, 2));
+	const T = Math.sqrt(Math.pow(L, 2) + Math.pow(L / 2, 2));
+	const res = circle_intersection(startx, starty, T, endx, endy, L / 2);
+	return [{x: startx/window.CURRENT_SCENE_DATA.scale_factor,
+		 y: starty/window.CURRENT_SCENE_DATA.scale_factor},
+		{x: res[0]/window.CURRENT_SCENE_DATA.scale_factor,
+		 y: res[2]/window.CURRENT_SCENE_DATA.scale_factor},
+		{x: res[1]/window.CURRENT_SCENE_DATA.scale_factor,
+		 y: res[3]/window.CURRENT_SCENE_DATA.scale_factor}];
+}
+
 function drawCone(ctx, startx, starty, endx, endy, style, fill=true, lineWidth = 6, addStrokeToFill = false)
 {
 	let L = Math.sqrt(Math.pow(endx - startx, 2) + Math.pow(endy - starty, 2));
@@ -6059,9 +6071,213 @@ function redraw_light(){
 
 }
 
+function doesSquareIntersectPolygon(squareX, squareY, size, polygon) {
+    const square = [
+        { x: squareX, y: squareY },
+        { x: squareX + size, y: squareY },
+        { x: squareX + size, y: squareY + size },
+        { x: squareX, y: squareY + size }
+    ];
+    // Quick bounding box check
+    const squareBox = {
+        minX: squareX,
+        maxX: squareX + size,
+        minY: squareY,
+        maxY: squareY + size
+    };
+    const polyBox = getBoundingBox(polygon);
+    if (!boxesOverlap(squareBox, polyBox)) return false;
+    // 1. Check if any polygon edge intersects square edge
+    for (let i = 0; i < polygon.length; i++) {
+        const p1 = polygon[i];
+        const p2 = polygon[(i + 1) % polygon.length];
+
+        for (let j = 0; j < square.length; j++) {
+            const q1 = square[j];
+            const q2 = square[(j + 1) % square.length];
+
+            if (segmentsIntersect(p1, p2, q1, q2)) {
+                return true;
+            }
+        }
+    }
+    // 2. Check if square is inside polygon
+    if (pointInPolygon(square[0], polygon)) return true;
+    // 3. Check if polygon is inside square
+    if (polygon.some(p => pointInRect(p, squareBox))) return true;
+
+    return false;
+}
+
+function getBoundingBox(points) {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const p of points) {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+    }
+    return { minX, maxX, minY, maxY };
+}
+
+function boxesOverlap(a, b) {
+    return a.minX <= b.maxX && a.maxX >= b.minX &&
+           a.minY <= b.maxY && a.maxY >= b.minY;
+}
+
+function segmentsIntersect(p1, p2, q1, q2) {
+    function ccw(a, b, c) {
+        return (c.y - a.y) * (b.x - a.x) > (b.y - a.y) * (c.x - a.x);
+    }
+    return ccw(p1, q1, q2) !== ccw(p2, q1, q2) && ccw(p1, p2, q1) !== ccw(p1, p2, q2);
+}
+
+function pointInPolygon(point, polygon) {
+    let inside = false;
+	console.log("PIP", point, polygon);
+	for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+		const xi = polygon[i].x, yi = polygon[i].y;
+        const xj = polygon[j].x, yj = polygon[j].y;
+
+        const intersect = ((yi > point.y) !== (yj > point.y)) &&
+                          (point.x < (xj - xi) * (point.y - yi) / (yj - yi + 1e-10) + xi);
+		console.log("INTERSECT", xj, yj, intersect);
+        if (intersect) inside = !inside;
+    }
+	console.log("MATHC---------------PIP", inside);
+	return inside;
+}
+
+function pointInCircle(x,y, shape) {
+	const { x: cx, y: cy, r } = shape;
+	let distanceSquared = (x - cx) ** 2 + (y - cy) ** 2;
+	let radiusSquared = r ** 2;
+	return (distanceSquared <= radiusSquared);
+}
+
+function pointInRect(p, rect) {
+	return p.x >= rect.minX && p.x <= rect.maxX &&
+	       p.y >= rect.minY && p.y <= rect.maxY;
+}
+
+function rotatePoint(px, py, cx, cy, R) {
+        const cosA = Math.cos(R);
+        const sinA = Math.sin(R);
+	return {x: cx + (px - cx) * cosA - (py - cy) * sinA,
+		y: cy + (px - cx) * sinA + (py - cy) * cosA};
+}
+function rotatePoints(poly, cx, cy, R) {
+	return poly.map(point => rotatePoint(point.x, point.y, cx, cy, R));	
+}
+
+function aoe_to_shape(aoe, ctx, isDarkness = false){
+	console.log(aoe);
+	const currentAoe = $(`#tokens .token[data-id='${aoe.options.id}']`);
+	console.log(currentAoe);
+	let left = parseFloat(currentAoe.css('left'));
+	let top = parseFloat(currentAoe.css('top'));
+	let width = parseFloat(currentAoe.css('width'));
+	let height = parseFloat(currentAoe.css('height'));
+	let scale = window.CURRENT_SCENE_DATA.scale_factor;
+	let divideScale = 1
+	if(isDarkness == false){
+		scale = 1;
+		divideScale = window.CURRENT_SCENE_DATA.scale_factor;
+	}
+	if(currentAoe.find('.aoe-shape-circle').length>0) {
+		return { type:"circle",
+			 x: (left + width/2) * scale,
+			 y: (top + height/2) * scale,
+			 r: (width/2) * scale };
+	}
+	const cX = (left + width/2)/divideScale;
+	const cY = (top + height/2)/divideScale;
+	const rot = parseFloat(currentAoe.css('--token-rotation')) * (Math.PI/180);
+	if(currentAoe.find('.aoe-shape-square').length>0 || 
+	   currentAoe.find('.aoe-shape-line').length>0){		
+		const poly = rotatePoints([
+			{x: cX-width/2*scale, y: cY-height/2*scale},
+			{x: cX-width/2*scale, y: cY+height*scale},
+			{x: cX+width*scale, y: cY+height*scale},
+			{x: cX+width*scale, y: cY-height/2*scale}
+		], cX, cY, rot);
+		return {type: "poly", poly: poly};
+	}
+	if(currentAoe.find('.aoe-shape-cone').length>0){
+		const poly = rotatePoints(conePoly(cX,
+						   cY+(-height-(height*0.30))/divideScale,
+						   cX,
+						   cY+(height+(height*0.30))/divideScale));
+		return {type: "poly", poly: poly};
+	}
+}
+
+function isSquareIntersectingCircle(sqX, sqY, size, circle) {
+	const { x: cx, y: cy, r: radius } = circle;
+	let closestX = Math.max(sqX, Math.min(cx, sqX + size));
+	let closestY = Math.max(sqY, Math.min(cy, sqY + size));
+	let distanceX = cx - closestX;
+	let distanceY = cy - closestY;
+	return (distanceX ** 2 + distanceY ** 2) <= (radius ** 2);
+}
+
+function shape_intersects_square(squareX, squareY, size, shape) {
+	if(shape.type === 'poly')
+		return doesSquareIntersectPolygon(squareX, squareY, size, shape.poly);
+	if(shape.type === 'circle')
+		return isSquareIntersectingCircle(squareX, squareY, size, shape);
+	return false;
+}
+function point_in_shape(x,y, shape) {
+	if(shape.type === 'poly') 
+		return pointInPolygon({x:x,y:y},shape.poly);
+	if(shape.type === 'circle')
+		return pointInCircle(x,y,shape);
+	return false;
+}
+function token_grid_size(options) {
+	if (options.sizeId != undefined) {
+		if(options.sizeId >= 5 && options.sizeId <= 7) {
+			return options.sizeId - 3;
+		}
+	} else if (options.tokenSize != undefined && parseFloat(options.tokenSize) != NaN) {
+		return parseFloat(options.tokenSize)
+	}
+	return 1;
+}
+function aoe_select_tokens(aoes, non_player) {
+	const tokens = [];
+	console.log("AOEs",aoes);	
+	for (let id in window.TOKEN_OBJECTS) {
+		const t = window.TOKEN_OBJECTS[id];
+		if (t.selected) t.selected = false;
+		if (! t.options.combatGroupToken &&
+		    t.options.type == undefined &&
+		    ! t.isAoe() &&
+		    (! t.isPlayer() || non_player))
+			tokens.push(t);
+	}
+	function shape_intersects(token,shape) {
+		const sq = Math.round(window.CURRENT_SCENE_DATA.hpps);
+		const gs = token_grid_size(token.options);
+		const left = parseFloat(token.options.left) + sq/2
+		const top = parseFloat(token.options.top) + sq/2
+		console.log("GRIDSZ",token, gs, sq, left, top, shape);
+		if(gs > 1) {
+			// this makes a square that contains all the center
+			// of square grid points covered by the token
+			return shape_intersects_square(left,top,sq * (gs - 1), shape);
+		} else {
+			return point_in_shape(left, top, shape);
+		}
+	}
+	for(let aoe in aoes) {
+		tokens.filter(a => { return shape_intersects(a, aoe_to_shape(aoes[aoe])) } ).map( t => {t.selected = true; console.log("SELECTED", t); });
+	}
+	draw_selected_token_bounding_box();
+}
 
 function draw_aoe_to_canvas(targetAoes, ctx, isDarkness = false){
-
 	for(let i = 0; i<targetAoes.length; i++){
 		let currentAoe = $(targetAoes[i]);
 

@@ -1895,4 +1895,17 @@ function close_and_cleanup_generic_draggable_window(id) {
   container.find('.title_bar_close_button').off('click');
   container.find('.popout-button').off('click');
   container.remove();
-} 
+}
+
+function isPointInPolygon(x, y, polygon) {
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        let [xi, yi] = polygon[i];
+        let [xj, yj] = polygon[j];
+        // Check if the ray from (x, y) intersects with the edge (xi, yi) -> (xj, yj)
+        let intersect = ((yi > y) !== (yj > y)) &&
+                        (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
