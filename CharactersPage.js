@@ -155,6 +155,16 @@ const buffsDebuffs = {
     "type": "class",
     "class": "barbarian",
   },
+  "Luck": {
+    "tohit": "0",
+    "dmg": "0",
+    "save": "0",
+    "check": "0",
+    "replace": /1d20/gi,
+    "newRoll": '1d20ro=1',
+    "type": "species",
+    "species": "halfling",
+  },
   "Great Weapon Master (2024)": {
     "tohit": "0",
     "dmg": "+PB",
@@ -390,6 +400,13 @@ const buffsDebuffs = {
       "dmg": "+2d6",
       "save": "0",
       "check": "0",
+      "type": "spell"
+  },
+  "Synaptic Static": {
+      "tohit": "-d6",
+      "dmg": "0",
+      "save": "0",
+      "check": "-d6",
       "type": "spell"
   }
 }
@@ -734,7 +751,21 @@ function convertToRPGRoller(){
               .present(e.clientY, e.clientX) // TODO: convert from iframe to main window
           }
     })
- 
+    $('.integrated-dice__container.above-vtt-visited-damage:has([class*="styles_signed"])').off('mouseover.color').on('mouseover.color', function(e){
+      if(e.shiftKey){
+        $(this).toggleClass('advantageHover', true)
+      }
+      else if((!isMac() && e.ctrlKey) || e.metaKey){
+        $(this).toggleClass('disadvantageHover', true)
+      }else{
+        $(this).toggleClass('advantageHover', false)
+        $(this).toggleClass('disadvantageHover', false)
+      }
+    })
+   $('.integrated-dice__container.above-vtt-visited-damage:has([class*="styles_signed"])').off('mouseleave.color').on('mouseleave.color', function(e){
+      $(this).toggleClass('advantageHover', false)
+      $(this).toggleClass('disadvantageHover', false)
+    })
     $(`.integrated-dice__container:not('.above-combo-roll'):not('.above-aoe'):not(.avtt-roll-formula-button)`).off('click.rpg-roller').on('click.rpg-roller', function(e){
       if($(this).parent().hasClass('ct-reset-pane__hitdie-manager-dice'))// allow hit dice roll to go through ddb for auto heals - maybe setup our own message by put to https://character-service.dndbeyond.com/character/v5/life/hp/damage-taken later
         return;
@@ -744,9 +775,30 @@ function convertToRPGRoller(){
         return;
       }
       e.stopImmediatePropagation();
+
+
+      if (/^1d20/g.test( rollData.expression)) {
+        if(e.altKey){
+          if(e.shiftKey){
+            rollData.expression = rollData.expression.replace(/^1d20/g, '3d20kh1');
+          }
+           else if((!isMac() && e.ctrlKey) || e.metaKey){
+            rollData.expression = rollData.expression.replace(/^1d20/g, '3d20kl1');
+          }
+         }
+         else if(e.shiftKey){
+          rollData.expression = rollData.expression.replace(/^1d20/g, '2d20kh1');
+         }  
+         else if((!isMac() && e.ctrlKey) || e.metaKey){
+            rollData.expression = rollData.expression.replace(/^1d20/g, '2d20kl1');
+         }
+      }
+
       if(rollData.rollTitle == 'Initiative' && $(`[aria-label="Has advantage on initiative"]`).length){
         rollData.expression = rollData.expression.replace(/^1d20/g, '2d20kh1');
       }
+
+     
       window.diceRoller.roll(new DiceRoll(rollData.expression, rollData.rollTitle, rollData.rollType));
     });
 }
@@ -767,11 +819,11 @@ async function init_character_sheet_page() {
     observe_character_theme_change();
     observe_character_image_change();
     $(document).off('keydown.keypressAdv keyup.keypressAdv').on('keydown.keypressAdv keyup.keypressAdv', function(e) {
-      let target = $('.ddbc-combat-attack__icon.above-vtt-visited:hover, .ct-spells-spell__action.above-vtt-visited:hover')
+      let target = $('.ddbc-combat-attack__icon.above-vtt-visited:hover, .ct-spells-spell__action.above-vtt-visited:hover, .integrated-dice__container.above-vtt-visited-damage:has([class*="styles_signed"]):hover')
       if(e.shiftKey){
         $(target).toggleClass('advantageHover', true)
       }
-      else if(e.ctrlKey || e.metaKey){
+      else if((!isMac() && e.ctrlKey) || e.metaKey){
         $(target).toggleClass('disadvantageHover', true)
       }else{
         $(target).toggleClass('advantageHover', false)
@@ -1014,51 +1066,39 @@ function rebuild_buffs(fullBuild = false){
   window.rollBuffs = JSON.parse(localStorage.getItem('rollBuffs' + window.PLAYER_ID)) || [];
   rollBuffFavorites = JSON.parse(localStorage.getItem('rollFavoriteBuffs' + window.PLAYER_ID)) || [];
   let avttBuffSelect;
+  const innerBuffHtml = `
+    <ul id='favoriteBuffs'><li>Favorite</li></ul>
+    <ul id='classBuffs'><li>Class</li>
+      <ul id='barbarianBuffs'><li>Barbarian</li></ul>
+      <ul id='bardBuffs'><li>Bard</li></ul>
+      <ul id='clericBuffs'><li>Cleric</li></ul>
+      <ul id='druidBuffs'><li>Druid</li></ul>
+      <ul id='fighterBuffs'><li>Fighter</li></ul>
+      <ul id='monkBuffs'><li>Monk</li></ul>
+      <ul id='paladinBuffs'><li>Paladin</li></ul>
+      <ul id='rangerBuffs'><li>Ranger</li></ul>
+      <ul id='rogueBuffs'><li>Rogue</li></ul>
+      <ul id='sorcererBuffs'><li>Sorcerer</li></ul>
+      <ul id='warlockBuffs'><li>Warlock</li></ul>
+      <ul id='wizardBuffs'><li>Wizard</li></ul>
+    </ul>
+    <ul id='speciesBuffs'><li>Species</li>
+      <ul id='halflingBuffs'><li>Halfling</li></ul>
+    </ul>      
+    <ul id='spellBuffs'><li>Spells</li></ul>
+    <ul id='featBuffs'><li>Feats</li></ul>
+  `
   if(fullBuild){
     avttBuffSelect = $(`<div id="avtt-buff-options" class="dropdown-check-list">
       <span class="clickHandle">Roll Buff/Debuffs</span>
       <ul class="avttBuffItems">
-        <ul id='favoriteBuffs'><li>Favorite</li></ul>
-        <ul id='classBuffs'><li>Class</li>
-          <ul id='barbarianBuffs'><li>Barbarian</li></ul>
-          <ul id='bardBuffs'><li>Bard</li></ul>
-          <ul id='clericBuffs'><li>Cleric</li></ul>
-          <ul id='druidBuffs'><li>Druid</li></ul>
-          <ul id='fighterBuffs'><li>Fighter</li></ul>
-          <ul id='monkBuffs'><li>Monk</li></ul>
-          <ul id='paladinBuffs'><li>Paladin</li></ul>
-          <ul id='rangerBuffs'><li>Ranger</li></ul>
-          <ul id='rogueBuffs'><li>Rogue</li></ul>
-          <ul id='sorcererBuffs'><li>Sorcerer</li></ul>
-          <ul id='warlockBuffs'><li>Warlock</li></ul>
-          <ul id='wizardBuffs'><li>Wizard</li></ul>
-        </ul>
-        <ul id='spellBuffs'><li>Spells</li></ul>
-        <ul id='featBuffs'><li>Feats</li></ul>
+        ${innerBuffHtml}      
       </ul>
     </div>`)
   }
   else{
     avttBuffSelect = $(`#avtt-buff-options`);
-    avttBuffSelect.find('.avttBuffItems').html(`
-      <ul id='favoriteBuffs'><li>Favorite</li></ul>
-      <ul id='classBuffs'><li>Class</li>
-        <ul id='barbarianBuffs'><li>Barbarian</li></ul>
-        <ul id='bardBuffs'><li>Bard</li></ul>
-        <ul id='clericBuffs'><li>Cleric</li></ul>
-        <ul id='druidBuffs'><li>Druid</li></ul>
-        <ul id='fighterBuffs'><li>Fighter</li></ul>
-        <ul id='monkBuffs'><li>Monk</li></ul>
-        <ul id='paladinBuffs'><li>Paladin</li></ul>
-        <ul id='rangerBuffs'><li>Ranger</li></ul>
-        <ul id='rogueBuffs'><li>Rogue</li></ul>
-        <ul id='sorcererBuffs'><li>Sorcerer</li></ul>
-        <ul id='warlockBuffs'><li>Warlock</li></ul>
-        <ul id='wizardBuffs'><li>Wizard</li></ul>
-      </ul>
-      <ul id='spellBuffs'><li>Spells</li></ul>
-      <ul id='featBuffs'><li>Feats</li></ul>
-    `)
+    avttBuffSelect.find('.avttBuffItems').html(innerBuffHtml)
   }
 
   const avttBuffItems = avttBuffSelect.find('.avttBuffItems')
@@ -1086,7 +1126,7 @@ function rebuild_buffs(fullBuild = false){
     {}
   );
   for(let i in sortedBuffs){
-    const headerRow = avttBuffItems.find(`ul#${buffsDebuffs[i].type == 'class' ? buffsDebuffs[i].class : buffsDebuffs[i].type}Buffs`);
+    const headerRow = avttBuffItems.find(`ul#${buffsDebuffs[i].type == 'class' ? buffsDebuffs[i].class : buffsDebuffs[i].type == 'species' ? buffsDebuffs[i].species : buffsDebuffs[i].type}Buffs`);
     const replacedName = i.replace("'", '');
     const addToFavorite = rollBuffFavorites.includes(replacedName);
 
@@ -1353,11 +1393,11 @@ function observe_character_sheet_changes(documentToObserve) {
         '-ms-user-select': 'none',
         'user-select': 'none',
       })
-      spells.off().on('mouseover.color', function(e){
+      spells.off('mouseover.color').on('mouseover.color', function(e){
         if(e.shiftKey){
           $(this).toggleClass('advantageHover', true)
         }
-        else if(e.ctrlKey || e.metaKey){
+        else if((!isMac() && e.ctrlKey) || e.metaKey){
           $(this).toggleClass('disadvantageHover', true)
         }else{
           $(this).toggleClass('advantageHover', false)
@@ -1389,14 +1429,14 @@ function observe_character_sheet_changes(documentToObserve) {
                     if(e.shiftKey){
                       diceRoll = new DiceRoll(`3d20kh1${data.modifier}`, data.rollTitle, data.rollType);
                     }
-                     else if(e.ctrlKey || e.metaKey){
+                     else if((!isMac() && e.ctrlKey) || e.metaKey){
                       diceRoll = new DiceRoll(`3d20kl1${data.modifier}`, data.rollTitle, data.rollType);
                     }
                    }
                    else if(e.shiftKey){
                     diceRoll = new DiceRoll(`2d20kh1${data.modifier}`, data.rollTitle, data.rollType);
                    }
-                   else if(e.ctrlKey || e.metaKey){
+                   else if((!isMac() && e.ctrlKey) || e.metaKey){
                     diceRoll = new DiceRoll(`2d20kl1${data.modifier}`, data.rollTitle, data.rollType);
                    }else{
                     diceRoll = new DiceRoll(data.expression, data.rollTitle, data.rollType);
@@ -1636,11 +1676,11 @@ function observe_character_sheet_changes(documentToObserve) {
         '-ms-user-select': 'none',
         'user-select': 'none',
       })
-      attackIcons.off().on('mouseover.color', function(e){
+      attackIcons.off('mouseover.color').on('mouseover.color', function(e){
         if(e.shiftKey){
           $(this).toggleClass('advantageHover', true)
         }
-        else if(e.ctrlKey || e.metaKey){
+        else if((!isMac() && e.ctrlKey) || e.metaKey){
           $(this).toggleClass('disadvantageHover', true)
         }else{
           $(this).toggleClass('advantageHover', false)
@@ -1684,14 +1724,14 @@ function observe_character_sheet_changes(documentToObserve) {
                 if(e.shiftKey){
                   data.expression = data.expression.replaceAll(/^1d20/g, '3d20kh1')
                  }
-                 else if(e.ctrlKey || e.metaKey){
+                 else if((!isMac() && e.ctrlKey) || e.metaKey){
                   data.expression = data.expression.replaceAll(/^1d20/g, '3d20kl1')
                  }
               }
               else if(e.shiftKey){
                 data.expression = data.expression.replaceAll(/^1d20/g, '2d20kh1')
               }
-              else if(e.ctrlKey || e.metaKey){
+              else if((!isMac() && e.ctrlKey) || e.metaKey){
                 data.expression = data.expression.replaceAll(/^1d20/g, '2d20kl1')
               }  
             }

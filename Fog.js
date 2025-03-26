@@ -597,14 +597,14 @@ function is_token_in_aoe_context(tokenid, aoeContext=undefined){
 	let gridSquares = window.TOKEN_OBJECTS[tokenid].options.gridSquares;
 
 	if(gridSquares != undefined){
-		gridSquares = Math.max(gridSquares, 1);
+		gridSquares = Math.max(Math.round(gridSquares), 1);
 		let centerSquareLeft = (parseInt(window.TOKEN_OBJECTS[tokenid].options.left.replace('px', ''))/ window.CURRENT_SCENE_DATA.scale_factor) + window.CURRENT_SCENE_DATA.hpps/2/window.CURRENT_SCENE_DATA.scale_factor;
 		let centerSquareTop = (parseInt(window.TOKEN_OBJECTS[tokenid].options.top.replace('px', ''))/ window.CURRENT_SCENE_DATA.scale_factor) + window.CURRENT_SCENE_DATA.vpps/2/window.CURRENT_SCENE_DATA.scale_factor;
 		let pixeldata = aoeContext.getImageData(centerSquareLeft - 2, centerSquareTop -2, 4, 4).data;
 
-		for(let x = 0; x<gridSquares; x++){
+		for(let x = 0; x<=gridSquares-1; x++){
 			let left = centerSquareLeft + (window.CURRENT_SCENE_DATA.hpps/window.CURRENT_SCENE_DATA.scale_factor)*x;
-			for(let y = 0; y<gridSquares; y++){
+			for(let y = 0; y<=gridSquares-1; y++){
 				let top = centerSquareTop + (window.CURRENT_SCENE_DATA.vpps/window.CURRENT_SCENE_DATA.scale_factor)*y;
 				let pixeldata = aoeContext.getImageData(left-2, top-2, 4, 4).data;
 				for(let i=0; i<pixeldata.length; i+=4){
@@ -2287,6 +2287,8 @@ function numToColor(num, alpha, max) {
  * @returns
  */
 function drawing_mousedown(e) {
+	if($(e.target).is('#context-menu-layer'))
+		return;
 	// perform some cleanup of the canvas/objects
 	if(e.button !== 2 && !window.MOUSEDOWN){
 		clear_temp_canvas()

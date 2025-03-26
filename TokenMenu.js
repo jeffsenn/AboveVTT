@@ -80,6 +80,53 @@ function close_token_context_menu() {
 	$("#tokenOptionsClickCloseDiv").click();
 }
 
+
+function select_tokens_in_aoe(aoeTokens, selectPlayerTokens = true){
+	deselect_all_tokens();
+	let canvas = document.createElement('canvas');
+	let ctx = canvas.getContext('2d', { willReadFrequently: true }); //rare case where we can allow cpu do so all the lifting since it is not rendered
+	let rayCast = document.getElementById("raycastingCanvas");
+
+	canvas.width = rayCast.width;
+	canvas.height = rayCast.height;
+
+
+	ctx.globalCompositeOperation='source-over';
+	aoeTokens.forEach(token => {
+		draw_aoe_to_canvas($(`#tokens .token[data-id='${token.options.id}']`), ctx);
+	});
+
+
+	let promises = [];
+	for (let id in window.TOKEN_OBJECTS) {
+		if((!selectPlayerTokens && window.TOKEN_OBJECTS[id].isPlayer()) || 
+			window.TOKEN_OBJECTS[id].options.combatGroupToken ||
+			window.TOKEN_OBJECTS[id].options.type != undefined || 
+			window.TOKEN_OBJECTS[id].isAoe())
+				continue;
+
+		promises.push(new Promise(function(resolve) {
+			let tokenSelector = "div.token[data-id='" + id + "']";
+
+			//Combining some and filter cut down about 140ms for average sized picture
+			
+			const isInAoe = (is_token_in_aoe_context(id, ctx)); 
+			
+			if (isInAoe && !window.TOKEN_OBJECTS[id].options.hidden && !window.TOKEN_OBJECTS[id].options.locked) {
+				let tokenDiv = $(`#tokens>div[data-id='${id}']`)
+				if(tokenDiv.css("pointer-events")!="none" && tokenDiv.css("display")!="none" && !tokenDiv.hasClass("ui-draggable-disabled")) {
+					window.TOKEN_OBJECTS[id].selected = true;
+				}
+			}		
+			resolve();
+		}));
+	}
+	Promise.all(promises).then(()=>{
+		draw_selected_token_bounding_box();
+	})
+	close_token_context_menu();
+}
+
 /**
  * Opens a sidebar modal with token configuration options
  * @param tokenIds {Array<String>} an array of ids for the tokens being configured
@@ -890,93 +937,14 @@ function token_context_menu_expanded(tokenIds, e) {
 
 		let selectInAoeButton = $(`<button class="aoe-select-tokens material-icons">Select Tokens in Aoe</button>`)
 		selectInAoeButton.off().on("click", function(clickEvent){
-			deselect_all_tokens();
-			let canvas = document.createElement('canvas');
-			let ctx = canvas.getContext('2d');
-			let rayCast = document.getElementById("raycastingCanvas");
-
-			canvas.width = rayCast.width;
-			canvas.height = rayCast.height;
-			ctx.fillStyle = "black";
-			ctx.fillRect(0,0,canvas.width,canvas.height);
-
-			ctx.globalCompositeOperation='source-over';
-			tokens.forEach(token => {
-				draw_aoe_to_canvas($(`#tokens .token[data-id='${token.options.id}']`), ctx);
-			});
-
-
-			let promises = [];
-			for (let id in window.TOKEN_OBJECTS) {
-				if(window.TOKEN_OBJECTS[id].options.combatGroupToken || window.TOKEN_OBJECTS[id].options.type != undefined || window.TOKEN_OBJECTS[id].isAoe())
-					continue;
-				promises.push(new Promise(function(resolve) {
-					let tokenSelector = "div.token[data-id='" + id + "']";
-
-					//Combining some and filter cut down about 140ms for average sized picture
-					
-					const isInAoe = (is_token_in_aoe_context(id, ctx)); 
-					
-					if (isInAoe && (window.DM || !window.TOKEN_OBJECTS[id].options.hidden)) {
-						let tokenDiv = $(`#tokens>div[data-id='${id}']`)
-						if(tokenDiv.css("pointer-events")!="none" && tokenDiv.css("display")!="none" && !tokenDiv.hasClass("ui-draggable-disabled")) {
-							window.TOKEN_OBJECTS[id].selected = true;
-						}
-					}		
-					resolve();
-				}));
-			}
-			Promise.all(promises).then(()=>{
-				draw_selected_token_bounding_box();
-			})
-			close_token_context_menu();
+			select_tokens_in_aoe(tokens)
 		});
 
 		body.append(selectInAoeButton);
 
 		let selectMosnterInAoeButton = $(`<button class="aoe-select-tokens material-icons">Aoe select non-players</button>`)
 		selectMosnterInAoeButton.off().on("click", function(clickEvent){
-			deselect_all_tokens();
-			let canvas = document.createElement('canvas');
-			let ctx = canvas.getContext('2d');
-			let rayCast = document.getElementById("raycastingCanvas");
-
-			canvas.width = rayCast.width;
-			canvas.height = rayCast.height;
-			ctx.fillStyle = "black";
-			ctx.fillRect(0,0,canvas.width,canvas.height);
-
-			ctx.globalCompositeOperation='source-over';
-			tokens.forEach(token => {
-				draw_aoe_to_canvas($(`#tokens .token[data-id='${token.options.id}']`), ctx);
-			});
-			
-
-			let promises = [];
-			for (let id in window.TOKEN_OBJECTS) {
-				if(window.TOKEN_OBJECTS[id].options.combatGroupToken || window.TOKEN_OBJECTS[id].options.type != undefined || window.TOKEN_OBJECTS[id].isAoe() || window.TOKEN_OBJECTS[id].isPlayer())
-					continue;
-				promises.push(new Promise(function(resolve) {
-					let tokenSelector = "div.token[data-id='" + id + "']";
-
-					//Combining some and filter cut down about 140ms for average sized picture
-					
-					const isInAoe = (is_token_in_aoe_context(id, ctx)); 
-					
-					if (isInAoe && (window.DM || !window.TOKEN_OBJECTS[id].options.hidden)) {
-						let tokenDiv = $(`#tokens>div[data-id='${id}']`)
-						if(tokenDiv.css("pointer-events")!="none" && tokenDiv.css("display")!="none" && !tokenDiv.hasClass("ui-draggable-disabled")) {
-							window.TOKEN_OBJECTS[id].selected = true;
-						}
-					}		
-					resolve();
-				}));
-			}
-			Promise.all(promises).then(()=>{
-				draw_selected_token_bounding_box();
-			})
-			close_token_context_menu();
-	
+			select_tokens_in_aoe(tokens, false)
 		});
 
 		body.append(selectMosnterInAoeButton);
@@ -3946,6 +3914,44 @@ function open_quick_roll_menu(e){
 		qrm_update_popout();
 	});
 
+	let qrm_sendToGamelog = $("<button id='qrm-block-send-to-game-log'><span class='material-symbols-outlined'>login</span></button>");
+	qrm_sendToGamelog.click(function() {
+		let results = $("#quick_roll_area").clone();
+		results.find('#roll_bonus, .roll_mods_group, td>td:nth-of-type(2), td>td:nth-of-type(3)').remove();
+		results.find('input').replaceWith(function(){
+			return $(`<span>${$(this).val()}</span>`)
+		})
+		results.find('img').attr('width', '30').attr('height', '30');
+		results.find('tr').css({
+			'max-height': '30px',
+			'height': '30px'
+		})
+		results.find('tr>td:first-of-type').css({
+			'width': '30px',
+			'height': '30px'
+		})
+		results.find('tr>td:nth-of-type(even)').css({
+			'height': '15px',
+			'font-size': '12px'
+		})
+		results.css({'width':'100%'});
+		results.find('tr td span').each(function(){
+			if($(this).text().match(/fail/gi)){
+				$(this).toggleClass('save-fail', true)
+			}
+			else{
+				$(this).toggleClass('save-success', true)
+			}
+		})
+		results.attr('id','qrm-gamelog');
+		let msgdata = {
+			player: window.PLAYER_NAME,
+			img: window.PLAYER_IMG,
+			text: results[0].outerHTML,
+		};
+		window.MB.inject_chat(msgdata);
+	});
+
 	//Update HP buttons	
 	let qrm_hp_adjustment_wrapper=$('<div id="qrm_adjustment_wrapper" class="adjustments_wrapper"></div>');
 
@@ -4035,10 +4041,19 @@ function open_quick_roll_menu(e){
 	});
 
 	let qrm_footer = $("<div id='quick_roll_footer' class='footer-input-wrapper tfoot'/>");
-	qrm_footer.css('bottom', '0');
-	qrm_footer.css('position','sticky');
-	qrm_footer.css('background', "#f9f9f9");
-	qrm_footer.css('height', 'fit-content');
+	qrm_footer.css({
+		'bottom': '0',
+		'position':'sticky',
+		'background': "#f9f9f9",
+		'height': 'fit-content',
+	    'display': 'flex',
+	    'flex-direction': 'row',
+	    'flex-wrap': 'wrap',
+	    'justify-content': 'flex-start',
+	    'align-items': 'center',
+	    'row-gap': '5px',
+	});
+
 	
 	qrm_footer.append(damage_input)
 	qrm_footer.append(half_damage_input)
@@ -4051,6 +4066,7 @@ function open_quick_roll_menu(e){
 	qrm_footer.append(apply_adjustments)
 	//qrm_footer.append(heal_hp);
 	//qrm_footer.append(damage_hp);
+	qrm_footer.append(qrm_sendToGamelog);
 	qrm_footer.append(qrm_clear);
 	//damage_hp.hide()
 	//heal_hp.hide()

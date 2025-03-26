@@ -302,7 +302,7 @@ function get_available_styles(){
         "Water"
     ]
 }
-function add_aoe_to_statblock(html, tokenId=undefined){
+function add_aoe_to_statblock(html){
 
   const aoeRegEx = /(([\d]+)-foot(-long ([\d]+)-foot-wide|-long, ([\d]+)-foot-wide|-radius, [\d]+-foot-high|-radius)? ([a-zA-z]+))(.*?[\>\s]([a-zA-Z]+) damage)?/gi
 
@@ -406,13 +406,13 @@ function add_journal_roll_buttons(target, tokenId=undefined){
   // matches "1d10", " 1d10 ", "1d10+1", " 1d10+1 ", "1d10 + 1" " 1d10 + 1 "
   const strongRoll = /(<strong>)(([0-9]+d[0-9]+)\s?([+-]\s?[0-9]+)?)(<\/strong>)/gi
   const damageRollRegexBracket = /(\()(([0-9]+d[0-9]+)\s?([+-]\s?[0-9]+)?)(\))/gi
-  const damageRollRegex = /([:\s>])(([0-9]+d[0-9]+)\s?([+-]\s?[0-9]+)?)([\.\):\s<,])/gi
+  const damageRollRegex = /([:\s>])(([0-9]+d[0-9]+)\s?([+-]\s?[0-9]+)?)([\.\):\s<,]|$)/gi
   // matches " +1 " or " + 1 "
   const hitRollRegexBracket = /(?<![0-9]+d[0-9]+)(\()([+-]\s?[0-9]+)(\))/gi
-  const hitRollRegex = /(?<![0-9]+d[0-9]+)([:\s>])([+-]\s?[0-9]+)([:\s<,])/gi
+  const hitRollRegex = /(?<![0-9]+d[0-9]+)([:\s>])([+-]\s?[0-9]+)([:\s<,]|$)/gi
   const dRollRegex = /\s(\s?d[0-9]+)\s/gi
   const tableNoSpaceRollRegex = />(\s?d[0-9]+\s?)</gi
-  const rechargeRegEx = /(Recharge [0-6]?\s?[–-]?\s?[0-6])/gi
+  const rechargeRegEx = /(Recharge [0-6]?\s?[—–-]?\s?[0-6])/gi
   const actionType = "roll"
   const rollType = "AboveVTT"
   let updated = currentElement.html()
@@ -424,9 +424,9 @@ function add_journal_roll_buttons(target, tokenId=undefined){
     .replaceAll(hitRollRegex, ` $1<button data-exp='1d20' data-mod='$2' data-rolltype='to hit' data-actiontype=${actionType} class='avtt-roll-button' title='${actionType}'>$2</button>$3`)
     .replaceAll(dRollRegex, ` <button data-exp='1$1' data-mod='0' data-rolltype='to hit' data-actiontype=${actionType} class='avtt-roll-button' title='${actionType}'>$1</button> `)
     .replaceAll(tableNoSpaceRollRegex, `> <button data-exp='1$1' data-mod='0' data-rolltype='to hit' data-actiontype=${actionType} class='avtt-roll-button' title='${actionType}'>$1</button><`)
-    .replaceAll(rechargeRegEx, ` <button data-exp='1d6' data-mod='' data-rolltype='recharge' data-actiontype='Recharge' class='avtt-roll-button' title='${actionType}'>$1</button>`)
+    .replaceAll(rechargeRegEx, `<button data-exp='1d6' data-mod='' data-rolltype='recharge' data-actiontype='Recharge' class='avtt-roll-button' title='${actionType}'>$1</button>`)
 
-  updated = add_aoe_to_statblock(updated, tokenId);
+  updated = add_aoe_to_statblock(updated);
 
   
   let ignoreFormatting = $(currentElement).find('.ignore-abovevtt-formating');

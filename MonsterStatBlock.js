@@ -40,28 +40,38 @@ function build_and_display_stat_block_with_data(monsterData, container, tokenId,
             display_stat_block_in_container(new MonsterStatBlock(cached_monster_items[monsterId].monsterData), container, tokenId);
           }
           else{
-            display_stat_block_in_container(new MonsterStatBlock(cached_open5e_items[monsterId].monsterData), container, tokenId);}
+            display_stat_block_in_container(new MonsterStatBlock(cached_open5e_items[monsterId].monsterData), container, tokenId);
+          }
         }, open5e);
     }
 }
 
-function build_stat_block_for_copy(listItem, options){
+function build_stat_block_for_copy(listItem, options, open5e = false){
   const monsterData = listItem.monsterData;
-  let cachedMonsterItem = cached_monster_items[monsterData.id];
-    if (cachedMonsterItem) {
-        // we have a cached monster. this data is the best data we have so display that instead of whatever we were given
-        create_token_inside(find_sidebar_list_item_from_path(RootFolder.MyTokens.path), undefined, undefined, undefined, options, build_monster_copy_stat_block(new MonsterStatBlock(cachedMonsterItem.monsterData)));
-    } else {
-       let monsterId = (monsterData.slug) ? monsterData.slug : monsterData.id
-        fetch_and_cache_monsters([monsterId], function () {
-           create_token_inside(find_sidebar_list_item_from_path(RootFolder.MyTokens.path), undefined, undefined, undefined, options, build_monster_copy_stat_block(new MonsterStatBlock(cached_monster_items[monsterId].monsterData)));
-        }, false);
-    }
+  const monsterId = open5e == true ? monsterData.slug : monsterData.id
+  const cachedMonsterItem = open5e == true ? cached_open5e_items[monsterId] : cached_monster_items[monsterId];
+  build_import_loading_indicator('Fetching Statblock Info');
+  if (cachedMonsterItem) {
+      // we have a cached monster. this data is the best data we have so display that instead of whatever we were given
+      create_token_inside(find_sidebar_list_item_from_path(RootFolder.MyTokens.path), undefined, undefined, undefined, options, build_monster_copy_stat_block(new MonsterStatBlock(cachedMonsterItem.monsterData)));
+      $(".import-loading-indicator").remove();
+  } else {
+    fetch_and_cache_monsters([monsterId], function (open5e = false) {
+      if(!open5e){
+         create_token_inside(find_sidebar_list_item_from_path(RootFolder.MyTokens.path), undefined, undefined, undefined, options, build_monster_copy_stat_block(new MonsterStatBlock(cached_monster_items[monsterId].monsterData)));
+      }
+      else{
+         create_token_inside(find_sidebar_list_item_from_path(RootFolder.MyTokens.path), undefined, undefined, undefined, options, build_monster_copy_stat_block(new MonsterStatBlock(cached_open5e_items[monsterId].monsterData)));
+   
+      }
+      $(".import-loading-indicator").remove();
+    }, open5e);
+  }  
 }
 
 function display_stat_block_in_container(statBlock, container, tokenId, customStatBlock = undefined) {
     const token = window.TOKEN_OBJECTS[tokenId];
-    const html = (customStatBlock) ? $(`
+    let html = (customStatBlock) ? $(`
     <div class="container avtt-stat-block-container custom-stat-block">${customStatBlock}</div>`) : build_monster_stat_block(statBlock, token);
     container.find("#noAccessToContent").remove(); // in case we're re-rendering with better data
     container.find(".avtt-stat-block-container").remove(); // in case we're re-rendering with better data
@@ -105,10 +115,18 @@ function display_stat_block_in_container(statBlock, container, tokenId, customSt
         send_html_to_gamelog(imgContainer[0].outerHTML);
     });
 
-   
+    if(!customStatBlock)
+      container.find("div.image").append(statBlock.imageHtml(token));
+    container.find("a").attr("target", "_blank"); // make sure we only open links in new tabs
+    if(!customStatBlock)
+      scan_monster(container, statBlock, tokenId);
+    else
+      add_ability_tracker_inputs(container, tokenId)
+    // scan_creature_pane(container, statBlock.name, statBlock.image);
+    add_stat_block_hover(container, tokenId);
     container.find("p>em>strong, p>strong>em").off("contextmenu.sendToGamelog").on("contextmenu.sendToGamelog", function (e) {
       e.preventDefault();
-      if(e.altKey || e.shiftKey || e.ctrlKey || e.metaKey)
+      if(e.altKey || e.shiftKey || (!isMac() && e.ctrlKey) || e.metaKey)
         return;
       let outerP = event.target.closest('p').outerHTML;
       const regExFeature = new RegExp(`<p(.+)?>.+(${event.target.outerHTML.replace(/([\(\)])/g,"\\$1")}.+?)(</p>|<br ?/?>|<p>)`, 'gi');
@@ -120,7 +138,7 @@ function display_stat_block_in_container(statBlock, container, tokenId, customSt
       e.preventDefault();
       if($(event.target).text().includes('Recharge'))
         return;
-      let rollButtons = $(event.target.closest('p')).find('.avtt-roll-button');
+      let rollButtons = $(event.target.closest('p')).find('.avtt-roll-button:not([data-rolltype="recharge"])');
       const displayName = window.TOKEN_OBJECTS[tokenId] ? window.TOKEN_OBJECTS[tokenId].options?.revealname == true ? window.TOKEN_OBJECTS[tokenId].options.name : `` : target.find(".mon-stat-block__name-link").text(); // Wolf, Owl, etc
       const creatureAvatar = window.TOKEN_OBJECTS[tokenId]?.options.imgsrc || statBlock.data.avatarUrl;
       $(event.target.closest('p')).find('.avtt-aoe-button')?.click();
@@ -134,14 +152,14 @@ function display_stat_block_in_container(statBlock, container, tokenId, customSt
                 if(e.shiftKey){
                   diceRoll = new DiceRoll(`3d20kh1${data.modifier}`, data.rollTitle, data.rollType, displayName, creatureAvatar, "monster");
                  }
-                 else if(e.ctrlKey || e.metaKey){
+                 else if((!isMac() && e.ctrlKey) || e.metaKey){
                   diceRoll = new DiceRoll(`3d20kl1${data.modifier}`, data.rollTitle, data.rollType, displayName, creatureAvatar, "monster");
                  }
              }
              else if(e.shiftKey){
               diceRoll = new DiceRoll(`2d20kh1${data.modifier}`, data.rollTitle, data.rollType, displayName, creatureAvatar, "monster");
              }
-             else if(e.ctrlKey || e.metaKey){
+             else if((!isMac() && e.ctrlKey) || e.metaKey){
               diceRoll = new DiceRoll(`2d20kl1${data.modifier}`, data.rollTitle, data.rollType, displayName, creatureAvatar, "monster");
              }else{
               diceRoll = new DiceRoll(data.expression, data.rollTitle, data.rollType, displayName, creatureAvatar, "monster")
@@ -158,21 +176,10 @@ function display_stat_block_in_container(statBlock, container, tokenId, customSt
         }
       }
     })
+    let abilities= container.find("p>em>strong, p>strong>em");
 
-
-    if(!customStatBlock)
-      container.find("div.image").append(statBlock.imageHtml(token));
-    container.find("a").attr("target", "_blank"); // make sure we only open links in new tabs
-    if(!customStatBlock)
-      scan_monster(container, statBlock, tokenId);
-    else
-      add_ability_tracker_inputs(container, tokenId)
-    // scan_creature_pane(container, statBlock.name, statBlock.image);
-    add_stat_block_hover(container, tokenId);
-
-    let abilities = container.find("p>em>strong, p>strong>em");
     for(let i = 0; i<abilities.length; i++){
-      if($(abilities[i]).closest('p').find('.avtt-roll-button').length>0 && !$(abilities[i]).closest('p').text().includes('Recharge')){
+      if($(abilities[i]).closest('p').find('.avtt-roll-button').length>0 ){
         $(abilities[i]).toggleClass('avtt-ability-roll-button', true);
       }
     }
@@ -770,7 +777,7 @@ function build_monster_stat_block(statBlock, token) {
         `;
     }
 
-    statblockData = add_aoe_to_statblock(statblockData, token.options.id);
+    statblockData = add_aoe_to_statblock(statblockData);
     return statblockData;
 }
 function build_monster_copy_stat_block(statBlock) {
