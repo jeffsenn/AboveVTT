@@ -32,6 +32,30 @@ const doorColors = {
 		'open': "rgba(50, 180, 180, 0.5)", // secret locked window
 		'closed': "rgba(50, 180, 180, 1)"
 	},
+	8: {
+		'open': "rgba(255, 150, 0, 0.5)", // curtain
+		'closed': "rgba(255, 150, 0, 1)"
+	},
+	9: {
+		'open': "rgba(150, 100, 0, 0.5)", // locked curtain
+		'closed': "rgba(150, 100, 0, 1)"
+	},
+	10: {
+		'open': "rgba(180, 0, 0, 0.5)", // secret curtain
+		'closed': "rgba(180, 0, 0, 1)"
+	},
+	11: {
+		'open': "rgba(100, 25, 0, 0.5)", // secret locked curtain
+		'closed': "rgba(100, 25, 0, 1)"
+	},
+	12: {
+		'open': "rgba(25, 25, 180, 0.5)", // portal
+		'closed': "rgba(25, 25, 180, 1)"
+	},	
+	13: {
+		'open': "rgba(10, 10, 50, 0.5)", // secret portal
+		'closed': "rgba(10, 10, 50, 1)"
+	},
 };
 let doorColorsArray = [];
 
@@ -677,7 +701,7 @@ function is_door_under_light_aura(door, lightContext=undefined){
 
 	let left = parseFloat($(door).css('--mid-x'))/window.CURRENT_SCENE_DATA.scale_factor;
 	let top = parseFloat($(door).css('--mid-y'))/window.CURRENT_SCENE_DATA.scale_factor;
-	let pixeldata = lightContext.getImageData(left-5, top-5, 10, 10).data;
+	let pixeldata = lightContext.getImageData(left-10, top-10, 20, 20).data;
 	
 	for(let i=0; i<pixeldata.length; i+=4){
 		if(pixeldata[i]>4 || pixeldata[i+1]>4 || pixeldata[i+2]>4)
@@ -1756,7 +1780,8 @@ function redraw_drawn_light(){
 				height = (height != undefined && parseInt(height) != 0) ? height/window.CURRENT_SCENE_DATA.fpsq*window.CURRENT_SCENE_DATA.hpps/window.CURRENT_SCENE_DATA.scale_factor : undefined
 			}
 		}
-
+		
+		targetCtx.filter = `blur(3px)`;
 
 		if (shape == "eraser") {
 			targetCtx.clearRect(x/window.CURRENT_SCENE_DATA.scale_factor, y/window.CURRENT_SCENE_DATA.scale_factor, width/window.CURRENT_SCENE_DATA.scale_factor, height/window.CURRENT_SCENE_DATA.scale_factor);
@@ -1787,6 +1812,7 @@ function redraw_drawn_light(){
 		if(shape == "3pointRect"){
 		 	draw3PointRect(targetCtx, x, color, isFilled, lineWidth, undefined, undefined, scale);	
 		}
+		targetCtx.filter = "none";
 	}
 
 	lightCtx.drawImage(offscreenDraw, 0, 0); // draw to visible canvas only once so we render this once
@@ -1895,12 +1921,11 @@ function redraw_light_walls(clear=true){
         let dataHidden = hidden;
         let notVisible = doorButton?.hasClass('notVisible') ? true : false;
 
-        let doorType = (type == 1 || type == 3 || type == 6 || type == 7) ? `window` : `door`;
+        let doorType = (type == 1 || type == 3 || type == 6 || type == 7) ? `window` : (type == 8 || type == 9 || type == 10 || type == 11) ? `curtain` : (type == 12 || type == 13) ? `teleporter` : `door`;
 
         if(doorButton.find('.window').length > 0 && doorType != 'window' || doorButton.find('.window').length == 0 && doorType == 'window'){
         	doorButton.remove();
         }
-
 
 
 		if(doorButton.length==0 && doorColorsArray.includes(color)){
@@ -1909,10 +1934,10 @@ function redraw_light_walls(clear=true){
 			let midY = Math.floor((y+height)/2) / scale * currentSceneScale;
 
 
-			let doorType = (type == 1 || type == 3 || type == 6 || type == 7) ? `window` : `door`;
+			let doorType = (type == 1 || type == 3 || type == 6 || type == 7) ? `window` : (type == 8 || type == 9 || type == 10 || type == 11) ? `curtain` : (type == 12 || type == 13) ? `teleporter` : `door`;
 			
-			let locked = (type == 2 || type == 3 || type == 5 || type == 7) ? ` locked` : ``;
-			let secret = (type == 4 || type == 5 || type == 6 || type == 7) ? ` secret` : ``;
+			let locked = (type == 2 || type == 3 || type == 5 || type == 7 || type == 9 || type == 11) ? ` locked` : ``;
+			let secret = (type == 4 || type == 5 || type == 6 || type == 7 || type == 10 || type == 11 || type == 13) ? ` secret` : ``;
 		
 			open = (/rgba.*0\.5\)/g).test(color) ? ` open` : ` closed`;
 			
@@ -1922,9 +1947,38 @@ function redraw_light_walls(clear=true){
 												<div class='door-icon'></div>
 										</div>`)
 			openCloseDoorButton.off('click.doors').on('click.doors', function(){
+
+					if(doorType == `teleporter`){
+						let alreadyHighlighted = false;
+						for(let i in window.CURRENTLY_SELECTED_TOKENS){
+
+							let curr = window.TOKEN_OBJECTS[window.CURRENTLY_SELECTED_TOKENS[i]];
+							if(!window.DM && (curr.options.restrictPlayerMove || curr.options.locked) && !curr.isCurrentPlayer() && curr.options.groupId == undefined){
+								continue;
+							}
+
+
+							let tokenObject = window.TOKEN_OBJECTS[`${x}${y}${width}${height}${window.CURRENT_SCENE_DATA.id}`.replaceAll('.','')]
+
+							if(tokenObject.options.teleporterCoords != undefined){
+								const scaleCoversion = window.CURRENT_SCENE_DATA.scale_factor != undefined ? window.CURRENT_SCENE_DATA.scale_factor / tokenObject.options.teleporterCoords.scale : 1 / tokenObject.options.teleporterCoords.scale;
+								curr.options.left = `${tokenObject.options.teleporterCoords.left*scaleCoversion - curr.options.size/2}px`;
+								curr.options.top = `${tokenObject.options.teleporterCoords.top*scaleCoversion - curr.options.size/2}px`
+							}
+							curr.place(0);
+							curr.sync($.extend(true, {}, curr.options));
+							if(!alreadyHighlighted){
+								alreadyHighlighted = true;
+								curr.highlight();
+							}
+						}
+						return;
+					}
+
+
 					let locked = $(this).hasClass('locked');
 					let secret = $(this).hasClass('secret');
-					let type = $(this).children('.door').length > 0 ? (secret && locked  ?  5 : (locked ? 2 : (secret ? 4 : 0 ))) : (secret && locked  ?  7 : (locked ? 3 : (secret ? 6 : 1 )))
+					let type = $(this).children('.door').length > 0 ? (secret && locked  ?  5 : (locked ? 2 : (secret ? 4 : 0 ))) : $(this).children('.window').length > 0 ? (secret && locked  ?  7 : (locked ? 3 : (secret ? 6 : 1 ))) : $(this).children('.curtain').length > 0 ? (secret && locked  ?  11 : (locked ? 9 : (secret ? 10 : 8 ))) : secret ? 13 : 12
 					if(!$(this).hasClass('locked') && (!shiftHeld || !window.DM)){
 						open_close_door(x, y, width, height, type)
 						let tokenObject = window.TOKEN_OBJECTS[`${x}${y}${width}${height}${window.CURRENT_SCENE_DATA.id}`.replaceAll('.','')]
@@ -1932,12 +1986,16 @@ function redraw_light_walls(clear=true){
 							tokenObject.place_sync_persist();
 					}
 					else if(shiftHeld && window.DM){
-						const type = doorType == `door` ? (secret ? (!locked ? 5 : 4) : (!locked ? 2 : 0)) : (secret ? (!locked ? 7 : 6) : (!locked ? 3 : 1))
+						if(doorType == `teleporter`)
+							return;
+						const type = doorType == `door` ? (secret ? (!locked ? 5 : 4) : (!locked ? 2 : 0)) : doorType == `window` ? (secret ? (!locked ? 7 : 6) : (!locked ? 3 : 1)) : doorType == `curtain` ? (secret ? (!locked ? 11 : 10) : (!locked ? 9 : 8)) : secret ? 13 : 12
 						const isOpen = $(this).hasClass('open') ? `open` : `closed`;
 						openCloseDoorButton.toggleClass('locked', !locked);
 						let doors = window.DRAWINGS.filter(d => (d[1] == "wall" && doorColorsArray.includes(d[2]) && d[3] == x && d[4] == y && d[5] == width && d[6] == height))  
 		            
 		        		window.DRAWINGS = window.DRAWINGS.filter(d => d != doors[0]);
+		        		
+
 		                let data = ['line',
 									 'wall',
 									 doorColors[type][isOpen],
@@ -1947,7 +2005,9 @@ function redraw_light_walls(clear=true){
 									 height,
 									 12,
 									 doors[0][8],
-									 doors[0][9]
+									 doors[0][9],
+									 (doors[0][10] != undefined ? doors[0][10] : ""),
+									 (doors[0][11] != undefined ? doors[0][11] : "")
 						];	
 						window.DRAWINGS.push(data);
 						window.wallUndo.push({
@@ -1971,10 +2031,10 @@ function redraw_light_walls(clear=true){
 			
 		}
 		else if (doorColorsArray.includes(color)){		
-			let secret = (type == 4 || type == 5 || type == 6 || type == 7) ? ` secret` : ``;
+			let secret = (type == 4 || type == 5 || type == 6 || type == 7 || type == 10 || type == 11 || type == 13) ? ` secret` : ``;
 
 	
-			let locked =(type == 2 || type == 3 || type == 5 || type == 7) ? ` locked` : ``;
+			let locked = (type == 2 || type == 3 || type == 5 || type == 7 || type == 9 || type == 11) ? ` locked` : ``;
 			open = (/rgba.*0\.5\)/g).test(color) ? ` open` : ` closed`;
 			if(doorButton.attr('class') != `door-button${locked}${secret}${open}${hiddenDoor}`){
 				doorButton.attr('class', `door-button${locked}${secret}${open}${hiddenDoor}`)
@@ -1991,6 +2051,9 @@ function redraw_light_walls(clear=true){
 			doorButton.removeAttr('removeAfterDraw');
 
 			door_note_icon(id);
+			if(window.TOKEN_OBJECTS[id]?.options?.teleporterCoords != undefined){
+				doorButton.toggleClass('linked', true);
+			}
 		}
 		
 		
@@ -2092,7 +2155,7 @@ function door_note_icon(id){
 							    </div>
 							</div>`
 				            const tooltipHtml = $(noteHover);
-							window.JOURNAL.translateHtmlAndBlocks(tooltipHtml);	
+							window.JOURNAL.translateHtmlAndBlocks(tooltipHtml, id);	
 							add_journal_roll_buttons(tooltipHtml);
 							window.JOURNAL.add_journal_tooltip_targets(tooltipHtml);
 							add_stat_block_hover(tooltipHtml);
@@ -2177,8 +2240,10 @@ function open_close_door(x1, y1, x2, y2, type=0){
 				 y2,
 				 12,
 				 doors[0][8],
-				 doors[0][9]
-				 ];	
+				 doors[0][9],
+				 (doors[0][10] != undefined ? doors[0][10] : ""),
+				 (doors[0][11] != undefined ? doors[0][11] : "")
+				];	
 	window.DRAWINGS.push(data);
 	window.wallUndo.push({
 		undo: [[...data]],
@@ -4159,8 +4224,9 @@ function bucketFill(ctx, mouseX, mouseY, fogStyle = 'rgba(0,0,0,0)', fogType=0, 
 	}
 	let fog = true;
   	particleUpdate(mouseX, mouseY); // moves particle
+  	let darknessBoundarys = getDarknessBoundarys();
   	if(distance1 != 0){
-  		particleLook(ctx, window.walls, distance1, fog, fogStyle, fogType, true, islight); 
+  		particleLook(ctx, [...window.walls, ...darknessBoundarys], distance1, fog, fogStyle, fogType, true, islight); 
   	}
 
 	if(distance2 != undefined){
@@ -4168,7 +4234,7 @@ function bucketFill(ctx, mouseX, mouseY, fogStyle = 'rgba(0,0,0,0)', fogType=0, 
 		let fogStyleArray = fogStyle.split(',');
 		fogStyleArray[3] = `${parseFloat(fogStyleArray[3])/2})`;
 		fogStyle = fogStyleArray.join(',');
-		particleLook(ctx, window.walls, distance2, fog, fogStyle, fogType, true, islight); 
+		particleLook(ctx,  [...window.walls, ...darknessBoundarys], distance2, fog, fogStyle, fogType, true, islight); 
 	}
 
 }
@@ -4630,7 +4696,13 @@ function get_available_doors(){
 		4: `Secret Door`,
 		5: `Secret Locked Door`,
 		6: `Secret Window`,
-		7: `Secret Locked Window`
+		7: `Secret Locked Window`,
+		8: `Curtain`,
+		9: `Locked Curtain`,
+		10: `Secret Curtain`,
+		11: `Secret Locked Curtain`,
+		12: `Portal`,
+		13: `Secret Portal`
 	}
 }
 
@@ -5422,8 +5494,8 @@ Ray.prototype.draw = function(ctx) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
 }; */
 
-Ray.prototype.cast = function(boundary) {
-
+Ray.prototype.cast = function(boundary, dirMultipler) {
+  let scale = window.CURRENT_SCENE_DATA.scale_factor != undefined ? parseFloat(window.CURRENT_SCENE_DATA.scale_factor) : 1;
   if(boundary.radius != undefined){
 		let u = {
 			x: boundary.a.x - this.pos.x,
@@ -5445,11 +5517,11 @@ Ray.prototype.cast = function(boundary) {
 			return;
 		}
 		else{
-			let p1 = new Vector(this.pos.x + u1.x + m*this.dir.x, this.pos.y + u1.y + m*this.dir.y);
+			let p1 = new Vector(this.pos.x + u1.x + m*dirMultipler*this.dir.x, this.pos.y + u1.y + m*dirMultipler*this.dir.y);
 					  
 		  	if(d < boundary.radius && Vector.dist(this.pos, boundary.a) > boundary.radius){
 		  		
-		  		let p2 = new Vector(this.pos.x + u1.x - m*this.dir.x, this.pos.y + u1.y - m*this.dir.y);
+		  		let p2 = new Vector(this.pos.x + u1.x - m*dirMultipler*this.dir.x, this.pos.y + u1.y - m*dirMultipler*this.dir.y);
 		  		let distance1 = Vector.dist(this.pos, p1);
 		  		let distance2 = Vector.dist(this.pos, p2);
 			  	if(distance1 >= distance2){
@@ -5497,8 +5569,8 @@ Ray.prototype.cast = function(boundary) {
 		
 		if (t >= 0 && t <= 1 && u >= 0) {
 		  const pt = new Vector();
-		  pt.x = x1 + t * r.x;
-		  pt.y = y1 + t * r.y;
+		  pt.x = x1 + t * r.x - dirMultipler*this.dir.x;
+		  pt.y = y1 + t * r.y - dirMultipler*this.dir.y;
 		  return pt;
 		} else {
 		  return;
@@ -5529,9 +5601,9 @@ function particleLook(ctx, walls, lightRadius=100000, fog=false, fogStyle, fogTy
 
 	lightPolygon = [];
 	movePolygon = [];
-	darknessPolygon = [];
-	let canSeeDarkness = window.TOKEN_OBJECTS[auraId]?.options.sight == 'devilsight' || window.TOKEN_OBJECTS[auraId]?.options.sight =='truesight';
+	noDarknessPolygon = [];
 
+	let canSeeDarkness = window.TOKEN_OBJECTS[auraId]?.options.sight == 'devilsight' || window.TOKEN_OBJECTS[auraId]?.options.sight =='truesight';
 	let tokenElev = window.TOKEN_OBJECTS[auraId]?.options?.elev && window.TOKEN_OBJECTS[auraId]?.options?.elev != '' ? parseInt(window.TOKEN_OBJECTS[auraId].options.elev) : 0;
 	tokenElev += window.TOKEN_OBJECTS[auraId]?.options?.mapElev ? parseInt(window.TOKEN_OBJECTS[auraId]?.options?.mapElev) : 0;
 
@@ -5539,14 +5611,20 @@ function particleLook(ctx, walls, lightRadius=100000, fog=false, fogStyle, fogTy
     let prevClosestPoint = null;
    	let prevClosestBarrier = null;
     let prevClosestBarrierPoint = null;
+    let prevClosestNoDarkness = null;
+    let prevClosestNoDarknessPoint = null;
     let closestWall = null;
     let closestBarrier = null;
+    let closestNoDarknessWall = null;
     let token;
     let x1;
     let x2;
     let y1;
     let y2;
     let tokenIsDoor;
+
+    let pointDirMultipler = islight ? 16 : 1; // used to keep light from bleeding through walls with bucketfill
+
     if(auraId){
     	let token = $(`#tokens [data-id='${auraId}']`)
     	tokenIsDoor = token.hasClass('door-button');
@@ -5555,30 +5633,34 @@ function particleLook(ctx, walls, lightRadius=100000, fog=false, fogStyle, fogTy
     	y1 = tokenIsDoor ? parseFloat(token.attr('data-y1')) / window.CURRENT_SCENE_DATA.scale_factor : 0;
     	y2 = tokenIsDoor ? parseFloat(token.attr('data-y2')) / window.CURRENT_SCENE_DATA.scale_factor : 0;
     }
+    let notBlockVision = [1, 3, 6, 7, 12, 13];
+    let notBlockMove = [8, 9, 10, 11, 12, 13];
 	for (let i = 0; i < window.PARTICLE.rays.length; i++) {
 	    let pt;
 	    let closestLight = null;
 	    let closestMove = null;
 	    let recordLight = Infinity;
 	    let recordMove = Infinity;
+	    let closestNoDarkness = null;
+	    let recordNoDarkness = Infinity;
+
 
 	    for (let j = 0; j < walls.length; j++) {
-	      if(walls[j].darkness == true && canSeeDarkness)
-	      	continue;
 	      let wallTop = walls[j].wallTop && walls[j].wallTop != '' ? parseInt(walls[j].wallTop) : Infinity;
 	      let wallBottom = walls[j].wallBottom && walls[j].wallBottom != '' ? parseInt(walls[j].wallBottom) : -Infinity;
 	      if(auraId != undefined && (tokenElev < wallBottom || tokenElev >= wallTop))
 	      	continue;
 	      
-	      	pt = window.PARTICLE.rays[i].cast(walls[j]);
-
+	      	pt = window.PARTICLE.rays[i].cast(walls[j], pointDirMultipler);
+	      	
 	      
 	      if (pt) {
 	        const dist = (Vector.dist(window.PARTICLE.pos, pt) < lightRadius) ? Vector.dist(window.PARTICLE.pos, pt) : lightRadius;
-	        if (dist < recordLight && walls[j].c != 1 && walls[j].c != 3 && walls[j].c != 6 && walls[j].c != 7) {
+	        if (dist < recordLight && !notBlockVision.includes(parseInt(walls[j].c))) {
 	          	if(!tokenIsDoor || walls[j].a.x*walls[j].scaleAdjustment != x1 || walls[j].a.y*walls[j].scaleAdjustment != y1 || walls[j].b.x*walls[j].scaleAdjustment != x2 || walls[j].b.y*walls[j].scaleAdjustment != y2)
       			{
-		          	recordLight = dist;          	
+		          	recordLight = dist;         
+		          	
 			        if(dist == lightRadius){
 			          	pt = {
 				          	x: window.PARTICLE.pos.x+window.PARTICLE.rays[i].dir.x * lightRadius,
@@ -5589,10 +5671,34 @@ function particleLook(ctx, walls, lightRadius=100000, fog=false, fogStyle, fogTy
 
 			        if(dist != lightRadius){    	
 			          	closestWall = walls[j];
-			        }         
+			        }      
   		       }
 	        }
-	        if(!walls[j].darkness){
+
+	        if(canSeeDarkness && walls[j].darkness != true){
+		        if (dist < recordNoDarkness && !notBlockMove.includes(parseInt(walls[j].c))) {
+		          	if(!tokenIsDoor || walls[j].a.x*walls[j].scaleAdjustment != x1 || walls[j].a.y*walls[j].scaleAdjustment != y1 || walls[j].b.x*walls[j].scaleAdjustment != x2 || walls[j].b.y*walls[j].scaleAdjustment != y2)
+	      			{
+
+			          	recordNoDarkness = dist;         
+			          	
+				        if(dist == lightRadius){
+				          	pt = {
+					          	x: window.PARTICLE.pos.x+window.PARTICLE.rays[i].dir.x * lightRadius,
+					          	y: window.PARTICLE.pos.y+window.PARTICLE.rays[i].dir.y * lightRadius
+					          }
+			       		}	           	
+			          	closestNoDarkness = pt;
+
+				        if(dist != lightRadius){    	
+				          	closestNoDarknessWall = walls[j];
+				        }      
+	  		       }
+		        }
+	        }
+	        if(!walls[j].darkness && !notBlockMove.includes(parseInt(walls[j].c))){
+
+
     	        if(dist < recordMove){
     	        	recordMove = dist;
     	        	 if(dist == lightRadius){
@@ -5612,7 +5718,7 @@ function particleLook(ctx, walls, lightRadius=100000, fog=false, fogStyle, fogTy
 
 	    }	    
 	   
-    	if (closestLight && (closestWall != prevClosestWall || i == 359 || closestWall.radius !=undefined)) {
+    	if (closestLight && (closestWall != prevClosestWall || i == 359 || closestWall?.radius != undefined)) {
     		if(closestWall != prevClosestWall && prevClosestWall != null && prevClosestPoint != null){	    		
     			lightPolygon.push({x: prevClosestPoint.x*window.CURRENT_SCENE_DATA.scale_factor, y: prevClosestPoint.y*window.CURRENT_SCENE_DATA.scale_factor}) 		
     		}
@@ -5631,17 +5737,23 @@ function particleLook(ctx, walls, lightRadius=100000, fog=false, fogStyle, fogTy
     		movePolygon.push({x: closestMove.x*window.CURRENT_SCENE_DATA.scale_factor, y: closestMove.y*window.CURRENT_SCENE_DATA.scale_factor})
     	}
      	
-    	if (closestLight && (closestWall != prevClosestWall || i == 359 || closestWall.radius != undefined) && (prevClosestWall?.darkness == true || closestWall?.darkness == true)) {
-    		if(closestWall != prevClosestWall && prevClosestWall != null && prevClosestPoint != null){	    		
-    			darknessPolygon.push({x: prevClosestPoint.x*window.CURRENT_SCENE_DATA.scale_factor, y: prevClosestPoint.y*window.CURRENT_SCENE_DATA.scale_factor}) 		
-    		}
-    		darknessPolygon.push({x: closestLight.x*window.CURRENT_SCENE_DATA.scale_factor, y: closestLight.y*window.CURRENT_SCENE_DATA.scale_factor})
-    	} 
+		if(canSeeDarkness){
+			if (closestNoDarkness && (closestNoDarknessWall != prevClosestNoDarkness || i == 359 || closestNoDarknessWall?.radius != undefined)) {
+	    		if(closestNoDarknessWall != prevClosestNoDarkness && prevClosestNoDarkness != null && prevClosestNoDarknessPoint != null){	    		
+	    			noDarknessPolygon.push({x: prevClosestNoDarknessPoint.x*window.CURRENT_SCENE_DATA.scale_factor, y: prevClosestNoDarknessPoint.y*window.CURRENT_SCENE_DATA.scale_factor}) 		
+	    		}
+	    		noDarknessPolygon.push({x: closestNoDarkness.x*window.CURRENT_SCENE_DATA.scale_factor, y: closestNoDarkness.y*window.CURRENT_SCENE_DATA.scale_factor})
+	    	} 
 
-    	if(recordLight == lightRadius){
-    		darknessPolygon.push({x: closestLight.x*window.CURRENT_SCENE_DATA.scale_factor, y: closestLight.y*window.CURRENT_SCENE_DATA.scale_factor})
-    	}
+	    	if(recordLight == lightRadius){
+	    		noDarknessPolygon.push({x: closestNoDarkness.x*window.CURRENT_SCENE_DATA.scale_factor, y: closestNoDarkness.y*window.CURRENT_SCENE_DATA.scale_factor})
+	    	}
+
+	    	prevClosestNoDarknessPoint = closestNoDarkness;
+	    	prevClosestNoDarkness = closestNoDarknessWall;
+		}
 	    
+
 
 
 	    prevClosestPoint = closestLight;
@@ -5649,6 +5761,9 @@ function particleLook(ctx, walls, lightRadius=100000, fog=false, fogStyle, fogTy
 
 	    prevClosestBarrierPoint = closestMove;
 	    prevClosestBarrier = closestBarrier;
+
+	   
+
 	}
   	if(draw == true){
 		if(!fog){
@@ -5735,7 +5850,7 @@ function detectInLos(x, y) {
 	
 
 
-function redraw_light(){
+function redraw_light(darknessMoved = false){
 	let startTime = Date.now();
 
 	
@@ -5822,13 +5937,6 @@ function redraw_light(){
 	tempDarknessCanvas.height = canvasHeight;
 
 	let darknessBoundarys = getDarknessBoundarys();
-	if(darknessBoundarys.length == 0){
-		tempDarknessCtx.clearRect(0,0,canvasWidth,canvasHeight);	
-	}
-	else{
-		tempDarknessCtx.fillStyle = "black";
-		tempDarknessCtx.fillRect(0,0,canvasWidth,canvasHeight);
-	}
 	
 	if(window.walls.length <= 4 && window.CURRENT_SCENE_DATA.darkness_filter == 0){
 		moveOffscreenContext.fillStyle = "white";
@@ -5953,10 +6061,12 @@ function redraw_light(){
 			}
 			if(window.lineOfSightPolygons[auraId]?.x == tokenPos.x && 
 				window.lineOfSightPolygons[auraId]?.y == tokenPos.y && 
-				window.lineOfSightPolygons[auraId]?.numberofwalls == walls.length+darknessBoundarys.length){
+				window.lineOfSightPolygons[auraId]?.numberofwalls == walls.length+darknessBoundarys.length  &&
+				window.lineOfSightPolygons[auraId].visionType == window.TOKEN_OBJECTS[auraId].options.sight &&
+				!darknessMoved){
 				lightPolygon = window.lineOfSightPolygons[auraId].polygon;  // if the token hasn't moved and walls haven't changed don't look for a new poly.
 				movePolygon = window.lineOfSightPolygons[auraId].move;  // if the token hasn't moved and walls haven't changed don't look for a new poly.
-				darknessPolygon = window.lineOfSightPolygons[auraId].darkness;
+				noDarknessPolygon = window.lineOfSightPolygons[auraId].noDarkness;
 			}
 			else{
 				
@@ -5972,13 +6082,31 @@ function redraw_light(){
 				window.lineOfSightPolygons[auraId] = {
 					polygon: lightPolygon,
 					move: movePolygon,
-					darkness: darknessBoundarys.length>0 ? darknessPolygon : undefined,
+					noDarkness: noDarknessPolygon,
 					x: tokenPos.x,
 					y: tokenPos.y,
-					numberofwalls: walls.length,
-					clippath: path
+					numberofwalls: walls.length+darknessBoundarys.length,
+					clippath: path,
+					visionType: window.TOKEN_OBJECTS[auraId].options.sight
 				}
-				$(`.aura-element-container-clip[id='${auraId}']`).css('clip-path', `path('${path}')`)
+
+			
+				$(`.aura-element-container-clip[id='${auraId}']:not(.vision)`).css('clip-path', `path('${path}')`)
+				
+
+	
+	
+				if( window.TOKEN_OBJECTS[auraId]?.options.sight == 'devilsight' || window.TOKEN_OBJECTS[auraId]?.options.sight =='truesight'){
+					let path = "";
+					for( let i = 0; i < noDarknessPolygon.length; i++ ){
+						path += (i && "L" || "M") + noDarknessPolygon[i].x/adjustScale+','+noDarknessPolygon[i].y/adjustScale
+					}
+					window.lineOfSightPolygons[auraId].devilsightClip = path;
+					$(`.aura-element-container-clip[id='${auraId}'].vision`).css('clip-path', `path('${path}')`)
+				
+				}
+				
+
 			}
 
 		
@@ -5996,7 +6124,7 @@ function redraw_light(){
 				tokenVisionAura.toggleClass('notVisible', false);
 			}
 
-			clipped_light(auraId, lightPolygon, playerTokenId, canvasWidth, canvasHeight);
+			clipped_light(auraId, lightPolygon, playerTokenId, canvasWidth, canvasHeight, darknessBoundarys);
 
 			if(window.lightAuraClipPolygon[auraId]?.canvas != undefined){
 				lightInLosContext.globalCompositeOperation='source-over';
@@ -6007,7 +6135,6 @@ function redraw_light(){
 
 
 
-			
 			if(selectedIds.length == 0 || found || !window.SelectedTokenVision){	
 				
 				let hideVisionWhenNoPlayerToken = (playerTokenId == undefined && !window.TOKEN_OBJECTS[auraId].options.share_vision && !window.DM && window.TOKEN_OBJECTS[auraId].options.itemType != 'pc')
@@ -6018,14 +6145,17 @@ function redraw_light(){
 				if(hideVisionWhenPlayerTokenExists)	//when player token does exist show your own vision and shared vision.
 					return resolve(); //we don't want to draw this tokens vision - go next token.
 
- 	
+ 				
  				
 				if(!window.DM || window.SelectedTokenVision){
 					if(window.lightAuraClipPolygon[auraId] != undefined && (currentLightAura.parent().hasClass('devilsight') || currentLightAura.parent().hasClass('truesight'))){
 						tempDarkvisionCtx.globalCompositeOperation='source-over';
 						drawCircle(tempDarkvisionCtx, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].darkvision, 'white')
+
 						tempDarkvisionCtx.globalCompositeOperation='destination-in';
-						drawPolygon(tempDarkvisionCtx, lightPolygon, 'rgba(255, 255, 255, 1)', true);
+						drawPolygon(tempDarkvisionCtx, noDarknessPolygon, 'rgba(255, 255, 255, 1)', true);
+						offscreenContext.globalCompositeOperation='source-over';
+						offscreenContext.drawImage(tempDarkvisionCanvas, 0, 0)
 					}
 					if(currentLightAura.parent().hasClass('devilsight')){
 						devilsightCtx.globalCompositeOperation='source-over';
@@ -6037,15 +6167,16 @@ function redraw_light(){
 					}
 
 				}
-				if(window.lineOfSightPolygons[auraId].darkness?.length > 0){
-					clearPolygon(tempDarknessCtx, window.lineOfSightPolygons[auraId].darkness);
-				}
+
 				
 				tokenVisionAura.toggleClass('notVisible', false);	
+				
 				drawPolygon(offscreenContext, lightPolygon, 'rgba(255, 255, 255, 1)', true); //draw to offscreen canvas so we don't have to render every draw and use this for a mask
 				drawPolygon(moveOffscreenContext, movePolygon, 'rgba(255, 255, 255, 1)', true); //draw to offscreen canvas so we don't have to render every draw and use this for a mask
-
+				
 			}
+
+		
 			resolve();
 		})); 	
 	}
@@ -6060,56 +6191,65 @@ function redraw_light(){
 		lightInLosContext.drawImage(offscreenCanvasMask, 0, 0);
 		if(!window.DM || window.SelectedTokenVision){
 			draw_darkness_aoe_to_canvas(lightInLosContext);
-			tempDarknessCtx.globalCompositeOperation='destination-out';
-			tempDarknessCtx.drawImage(truesightCanvas, 0, 0);
-			tempDarknessCtx.drawImage(devilsightCanvas, 0, 0);	
-
+	
 			lightInLosContext.globalCompositeOperation='source-over';	
-			lightInLosContext.drawImage(tempDarknessCanvas, 0, 0);		
 			lightInLosContext.drawImage(devilsightCanvas, 0, 0);
 
 			
 
 			truesightCanvasContext.globalCompositeOperation='destination-in';
 			truesightCanvasContext.drawImage(offscreenCanvasMask, 0, 0);
-
 		}
 	}
 	if(window.CURRENT_SCENE_DATA.darkness_filter != 0){
 		lightInLosContext.globalCompositeOperation='destination-over';
+		
 		lightInLosContext.drawImage($('#light_overlay')[0], 0, 0);
-
+		
 
 		if(!window.DM || window.SelectedTokenVision){
 			draw_darkness_aoe_to_canvas(lightInLosContext);
-			tempDarknessCtx.globalCompositeOperation='destination-out';
-			tempDarknessCtx.drawImage(truesightCanvas, 0, 0);
-			tempDarknessCtx.drawImage(devilsightCanvas, 0, 0);	
 
 			lightInLosContext.globalCompositeOperation='source-over';
-			lightInLosContext.drawImage(tempDarknessCanvas, 0, 0);
 			lightInLosContext.drawImage(devilsightCanvas, 0, 0);
 
 			
-
 			truesightCanvasContext.globalCompositeOperation='destination-in';
 			truesightCanvasContext.drawImage(offscreenCanvasMask, 0, 0);	
-
-			
 		}
 		
 		lightInLosContext.globalCompositeOperation='destination-in';
 		lightInLosContext.drawImage(offscreenCanvasMask, 0, 0);
 		
 
-		offscreenContext.globalCompositeOperation='destination-over';
+		let offscreenCanvasMask2 = document.createElement('canvas');
+		let offscreenContext2 = offscreenCanvasMask2.getContext('2d');
+
+		offscreenCanvasMask2.width = canvasWidth;
+		offscreenCanvasMask2.height = canvasHeight;
+
+		offscreenContext.globalCompositeOperation='xor';
 		offscreenContext.fillStyle = "black";
 		offscreenContext.fillRect(0,0,canvasWidth,canvasHeight);
+
+		offscreenContext2.drawImage(offscreenCanvasMask, 0, 0) // store darkness to redraw with blur
+		
+		offscreenContext.globalCompositeOperation='destination-over';
+		offscreenContext.fillStyle = "white";
+		offscreenContext.fillRect(0,0,canvasWidth,canvasHeight);
+
+		offscreenContext.filter = `blur(10px)`;
+		offscreenContext.globalCompositeOperation='source-over';
+		offscreenContext.drawImage(offscreenCanvasMask2, 0, 0);
+		offscreenContext.filter = `none`;
 	}	
 
 	requestAnimationFrame(function(){
+		context.filter = `blur(3px)`;
 		context.drawImage(offscreenCanvasMask, 0, 0); // draw to visible canvas only once so we render this once
+		context.filter = `none`;
 		if(gameIndexedDb != undefined && window.CURRENT_SCENE_DATA.visionTrail == '1' && !window.DM){
+
 			let exploredCanvas = document.getElementById("exploredCanvas");
 			if($('#exploredCanvas').length == 0){
 				exploredCanvas =  document.createElement("canvas")
@@ -6347,11 +6487,9 @@ function draw_aoe_to_canvas(targetAoes, ctx, isDarkness = false){
 function draw_darkness_aoe_to_canvas(ctx){
 	let darknessAoes = $('[data-darkness]');
 	ctx.globalCompositeOperation='source-over';
-	draw_aoe_to_canvas(darknessAoes, ctx, true)
-
-	
+	draw_aoe_to_canvas(darknessAoes, ctx, true);
 }
-function clipped_light(auraId, maskPolygon, playerTokenId, canvasWidth = $("#raycastingCanvas").width(), canvasHeight = $("#raycastingCanvas").height()){
+function clipped_light(auraId, maskPolygon, playerTokenId, canvasWidth = $("#raycastingCanvas").width(), canvasHeight = $("#raycastingCanvas").height(), darknessBoundarys = getDarknessBoundarys()){
 	//this saves clipped light offscreen canvas' to a window object so we can check them later to see what tokens are visible to the players
 	if(window.DM && !window.SelectedTokenVision)
 		return;
@@ -6380,7 +6518,7 @@ function clipped_light(auraId, maskPolygon, playerTokenId, canvasWidth = $("#ray
 			delete window.lightAuraClipPolygon[auraId];
 			return; // remove 0 range light and return
 		}
-		if(window.lightAuraClipPolygon[auraId].numberofwalls == walls.length && window.lightAuraClipPolygon[auraId].light == lightRadius && window.lightAuraClipPolygon[auraId].darkvision == darkvisionRadius && window.lightAuraClipPolygon[auraId].middle.x == horizontalTokenMiddle && window.lightAuraClipPolygon[auraId].middle.y == verticalTokenMiddle)
+		if(window.lightAuraClipPolygon[auraId].numberofwalls == walls.length+darknessBoundarys.length && window.lightAuraClipPolygon[auraId].light == lightRadius && window.lightAuraClipPolygon[auraId].darkvision == darkvisionRadius && window.lightAuraClipPolygon[auraId].middle.x == horizontalTokenMiddle && window.lightAuraClipPolygon[auraId].middle.y == verticalTokenMiddle)
 			return; // token settings and position have not changed - a lot of light will be stationary do not redraw checker canvas
 	}
 	else if(circleRadius == 0){
