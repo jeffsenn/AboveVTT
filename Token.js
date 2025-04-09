@@ -40,7 +40,7 @@ const availableToAoe = [
 
 
 
-const throttleLight = throttle((darknessMoved = false) => {requestAnimationFrame(()=>{redraw_light(darknessMoved)})}, 1000/8);
+const throttleLight = throttle((darknessMoved = false) => {requestAnimationFrame(()=>{redraw_light(darknessMoved)})}, 1000/30);
 const throttleTokenCheck = throttle(() => {requestAnimationFrame(()=>{do_check_token_visibility()})}, 1000/4);
 const debounceStoreExplored = mydebounce((exploredCanvas) => {		
 	let dataURI = exploredCanvas.toDataURL('image/jpg')
@@ -55,7 +55,7 @@ const debounceStoreExplored = mydebounce((exploredCanvas) => {
 	  const objectStoreRequest = objectStore.add({exploredId: `explore${window.gameId}${window.CURRENT_SCENE_DATA.id}`, 'exploredData': dataURI});
 	};
 }, 5000)
-let debounceLightChecks = mydebounce((darknessMoved = false) => {		
+var debounceLightChecks = mydebounce((darknessMoved = false) => {		
 		if(window.DRAGGING)
 			return;
 		if(window.walls?.length < 5){
@@ -67,11 +67,11 @@ let debounceLightChecks = mydebounce((darknessMoved = false) => {
 		
 }, 20);
 
-let debounceAudioChecks = mydebounce(() => {
+var debounceAudioChecks = mydebounce(() => {
 	checkAudioVolume();
 }, 20)
 
-let longDebounceLightChecks = mydebounce((darknessMoved = false) => {		
+var longDebounceLightChecks = mydebounce((darknessMoved = false) => {		
 		if(window.DRAGGING)
 			return;
 		if(window.walls?.length < 5){
@@ -5059,7 +5059,7 @@ function paste_selected_tokens(x, y) {
 		if (id in window.JOURNAL.notes) {
 			window.JOURNAL.notes[newId] = structuredClone(window.JOURNAL.notes[id]);
 			let copiedNote = window.JOURNAL.notes[newId];
-			copiedNote.title = window.TOKEN_OBJECTS[id].options.name;
+			copiedNote.title = window.all_token_objects[id].options.name;
 			window.JOURNAL.persist();
 			window.MB.sendMessage('custom/myVTT/note',{
 				id: newId,

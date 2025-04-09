@@ -1083,7 +1083,9 @@ div#scene_selector,
     bottom: 0;
     position: absolute !important;
 }
-
+#edit_dialog{
+    overflow: auto;
+}
 #edit_dialog button:not(.rc-switch),
 #edit_scene_form button:not(.rc-switch){
     background:none;
@@ -5334,9 +5336,13 @@ button.block-send-to-game-log span {
 #playersFolder .players-popout-button{
     position: absolute;
     top: 0px;
-    right: 30px;
+    left: 100px;
     margin-right: 5px;
     margin-top: 5px; 
+}
+#playersFolder .players-popout-button.subfolder-popout{
+    left:unset;
+    right:30px;
 }
 #playersFolder .hp-attribute.death-saves.ct-health-summary__data.ct-health-summary__deathsaves {
     float: right;
@@ -5410,9 +5416,31 @@ button.block-send-to-game-log span {
     bottom: 0;
     transform: scale(0.8);
 }
+#playersFolder .folder-item-list>.folder>.sidebar-list-item-row-item>.token-row-gear{
+    display: block;
+    width: 30px;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    background-color: rgb(242, 246, 248);
+    cursor: pointer;
+    min-width: 30px;
+    padding: 7px;
+    border-left: 1px solid rgb(216, 225, 232);
+    margin: -4px -4px -4px 2px;
+    height:auto;
+    border-radius: 0px;
+    padding: 7px;
+}
+#playersFolder .folder-item-list>.folder>.sidebar-list-item-row-item>.token-row-gear img{
+    transform:initial;
+    position:initial
+}
 #playersFolder .token-row-button .material-icons{
     font-size: 18px;
     padding: 0px;
+}
+#playersFolder>.sidebar-list-item-row-item:first-of-type>.token-row-button .material-icons {
+    font-size:25px;
 }
 #playersFolder .ddbc-box-background svg path{
     fill: var(--player-border-color, #F00);

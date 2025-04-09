@@ -271,14 +271,35 @@ function rebuild_token_items_list() {
     console.group("rebuild_token_items_list");
     try {
 
+    //bring old players folder data up to current structure to support players folders
+    const playersFolder = window.TOKEN_CUSTOMIZATIONS.find(tc=> tc.id == RootFolder.Players.id)
+    if(playersFolder !== undefined){
+        playersFolder.parentId = '_';
+        playersFolder.rootId = 'playersFolder';
+    }
 
     backfill_mytoken_folders(); // just in case we're missing any folders
 
     // Players
     let tokenItems = window.pcs
         .filter(pc => pc.sheet !== undefined && pc.sheet !== "")
-        .map(pc => SidebarListItem.PC(pc.sheet, pc.name, pc.image));
-
+        .map(pc => {
+            const playerCustomization = window.TOKEN_CUSTOMIZATIONS.find(tc => tc.id == pc.sheet);
+            //adjust old data structure
+            if([RootFolder.Monsters.id, RootFolder.MyTokens.id].includes(playerCustomization?.parentId))
+                playerCustomization.parentId = RootFolder.Players.id;
+            if([RootFolder.Monsters.id, RootFolder.MyTokens.id].includes(playerCustomization?.rootId))
+                playerCustomization.rootId = RootFolder.Players.id;
+            let folderPath = playerCustomization?.folderPath();
+            let parentId = playerCustomization?.parentId; 
+            return SidebarListItem.PC(pc.sheet, pc.name, pc.image, folderPath, parentId);
+        });
+    // Players Folders
+    window.TOKEN_CUSTOMIZATIONS
+        .filter(tc => tc.tokenType === ItemType.Folder && tc.fullPath().startsWith(RootFolder.Players.path))
+        .forEach(tc => {
+            tokenItems.push(SidebarListItem.Folder(tc.id, tc.folderPath(), tc.name(), tc.tokenOptions.collapsed, tc.parentId, ItemType.PC, tc.color))
+        })
     // My Tokens Folders
     window.TOKEN_CUSTOMIZATIONS
         .filter(tc => tc.tokenType === ItemType.Folder && tc.fullPath().startsWith(RootFolder.MyTokens.path))
@@ -1885,7 +1906,7 @@ function register_token_row_context_menu() {
 
             if (rowItem.canDelete()) {
 
-                if(!rowItem.isTypeFolder() && !rowItem.isTypeEncounter() && !rowItem.isTypePC())
+                if((!rowItem.isTypeFolder() && !rowItem.isTypeEncounter()))
                     menuItems["border"] = "---";
 
                 // not a built in folder or token, add an option to delete
@@ -1909,7 +1930,35 @@ function register_token_row_context_menu() {
         }
     });
 }
+/**
+ * Creates a "My Tokens" folder within another "My Tokens" folder
+ * @param listItem {SidebarListItem} The folder to create a new folder within
+ */
+function create_player_folder_inside(listItem) {
+    if (!listItem.isTypeFolder() || !listItem.fullPath().startsWith(RootFolder.Players.path)) {
+        console.warn("create_mytoken_folder_inside called with an incorrect item type", listItem);
+        return;
+    }
 
+    let newFolderName = "New Folder";
+    let newFolderCount = window.TOKEN_CUSTOMIZATIONS
+        .filter(tc => tc.tokenType === ItemType.Folder && tc.name().startsWith(newFolderName))
+        .length;
+    if (newFolderCount > 0) {
+        newFolderName += ` ${newFolderCount + 1}`;
+    }
+    let newFolder = TokenCustomization.Folder(uuid(), listItem.id, RootFolder.Players.id, { name: newFolderName });
+    persist_token_customization(newFolder, function(didSucceed, errorType) {
+        if (didSucceed) {
+                did_change_mytokens_items();
+                let newListItem = window.tokenListItems.find(li => li.type === ItemType.Folder && li.id === newFolder.id);
+                display_folder_configure_modal(newListItem);
+                expand_all_folders_up_to_item(newListItem);
+        } else {
+            showError(errorType, "create_mytoken_folder_inside failed to create a new folder");
+        }
+    });
+}
 /**
  * Creates a "My Tokens" folder within another "My Tokens" folder
  * @param listItem {SidebarListItem} The folder to create a new folder within
@@ -4546,7 +4595,7 @@ function getPersonailityTrait(){
         245: "Businesslike",
         246: "Busy",
         247: "Casual",
-        248: "Crebral",
+        248: "Cerebral",
         249: "Chummy",
         250: "Circumspect",
         251: "Competitive",
