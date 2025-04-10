@@ -113,6 +113,8 @@ function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
 function getSceneMapSize() {
 	if(window.sceneMapSize === undefined || window.sceneMapSize.id !== window.CURRENT_SCENE_DATA.id){
 		const sceneMap = document.getElementById("scene_map");
+		if(sceneMap === null)
+			return {id: window.CURRENT_SCENE_DATA?.id, sceneHeight: 0, sceneWidth: 0 }
 		window.sceneMapSize = { id: window.CURRENT_SCENE_DATA.id, sceneHeight: Math.floor(sceneMap.offsetHeight), sceneWidth: Math.floor(sceneMap.offsetWidth) }
 	}
 
@@ -732,7 +734,7 @@ function check_single_token_visibility(id){
 	else
 		playerHasTruesight = false
 
-	if((playerTokenId === undefined && (window.walls.length > 4 || window.CURRENT_SCENE_DATA.darkness_filter > 0)) || window.TOKEN_OBJECTS[playerTokenId].options.auraislight === true)
+	if((playerTokenId === undefined && (window.walls.length > 4 || window.CURRENT_SCENE_DATA.darkness_filter > 0)) || (playerTokenId !== undefined && window.TOKEN_OBJECTS[playerTokenId].options.auraislight === true))
 		playerTokenHasVision = true
 	else
 		playerTokenHasVision = false;
@@ -819,7 +821,7 @@ function do_check_token_visibility() {
 	else
 		playerHasTruesight = false
 
-	if((playerTokenId === undefined && (window.walls.length > 4 || window.CURRENT_SCENE_DATA.darkness_filter > 0)) || window.TOKEN_OBJECTS[playerTokenId].options.auraislight === true)
+	if((playerTokenId === undefined && (window.walls.length > 4 || window.CURRENT_SCENE_DATA.darkness_filter > 0)) || (playerTokenId !== undefined && window.TOKEN_OBJECTS[playerTokenId].options.auraislight === true))
 		playerTokenHasVision = true
 	else
 		playerTokenHasVision = false;
