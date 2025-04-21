@@ -111,14 +111,9 @@ function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
 * @returns {{sceneHeight: number, sceneWidth: number}}
 */
 function getSceneMapSize() {
-	if(window.sceneMapSize === undefined || window.sceneMapSize.id !== window.CURRENT_SCENE_DATA.id){
-		const sceneMap = document.getElementById("scene_map");
-		if(sceneMap === null)
-			return {id: window.CURRENT_SCENE_DATA?.id, sceneHeight: 0, sceneWidth: 0 }
-		window.sceneMapSize = { id: window.CURRENT_SCENE_DATA.id, sceneHeight: Math.floor(sceneMap.offsetHeight), sceneWidth: Math.floor(sceneMap.offsetWidth) }
-	}
-
-	return window.sceneMapSize
+	if(window.CURRENT_SCENE_DATA?.width === undefined)
+		return {sceneWidth: 0, sceneHeight: 0}
+	return {sceneWidth: window.CURRENT_SCENE_DATA.width, sceneHeight: window.CURRENT_SCENE_DATA.height }
 }
 /**
  * Class to manage measure waypoints
@@ -395,11 +390,15 @@ class WaypointManagerClass {
 		const eucDistance = Math.sqrt(xLength*xLength+yLength*yLength)/gridSize * window.CURRENT_SCENE_DATA.fpsq;
 		distance = Math.round(distance / gridSize);
 
-		const lineSlope = yLength/xLength;
 		let addedDistance = 0;
+		
+		if(rulerType == "fiveten" ){		
+        	const dx = Math.round(xLength / gridSize);
+       		const dy = Math.round(yLength / gridSize);
+       		//The below keeps the even/odd count for number of diagonals based on last waypoint position and sets addedDistance to the number of extra squares depending on the starting pattern.
+       		//If the last waypoint ended on even it follows the 1,2,1 squares pattern. If the last waypoint ended on odd it follows the 2,1,2 squares pattern for the next diagonal segments.
 
-		if(rulerType == "fiveten" && lineSlope > 0.6 && lineSlope < 1.4){
-			this.numberOfDiagonals = (this.numberOfDiagonals%2 == 0) ? distance : distance+1 ;
+			this.numberOfDiagonals = this.numberOfDiagonals%2 == 0 ? Math.min(dx, dy) : Math.min(dx, dy)+1;
 			addedDistance = Math.floor(this.numberOfDiagonals/2);
 		}
 
@@ -852,7 +851,7 @@ function do_check_token_visibility() {
 			
 			const inFog = (playerTokenId !== id && is_token_under_fog(id, fogContext) === true); // this token is in fog and not the players token
 
-			const notInLight = (inFog === true || (window.CURRENT_SCENE_DATA.disableSceneVision != 1 && playerTokenHasVision && is_token_in_raycasting_context(id, rayContext) !== true) || (playerTokenId !== id && window.CURRENT_SCENE_DATA.disableSceneVision != 1 && playerTokenHasVision === true && is_token_under_light_aura(id, lightContext) !== true)); // this token is not in light, the player is using vision/light and darkness > 0
+			const notInLight = (inFog === true || (playerTokenId !== id && window.CURRENT_SCENE_DATA.disableSceneVision != 1 && playerTokenHasVision === true && (is_token_in_raycasting_context(id, rayContext) !== true || is_token_under_light_aura(id, lightContext) !== true))); // this token is not in light, the player is using vision/light and darkness > 0
 			
 			const dmSelected = window.DM === true && window.CURRENTLY_SELECTED_TOKENS.includes(id)
 
@@ -1919,9 +1918,9 @@ function redraw_light_walls(clear=true){
 
 
 	window.walls =[];
-	let sceneMapContainer = $('#scene_map_container');
-	let sceneMapHeight = sceneMapContainer.height();
-	let sceneMapWidth = sceneMapContainer.width();
+	const sceneSize = getSceneMapSize();
+	let sceneMapHeight = sceneSize.sceneHeight;
+	let sceneMapWidth = sceneSize.sceneWidth;
 
 	let wall5 = new Boundary(new Vector(0, 0), new Vector(sceneMapWidth, 0), 0);
 	window.walls.push(wall5);
@@ -4174,15 +4173,16 @@ function drawPolygon (
 		if(window.tempoffCanvas == undefined){
 			window.tempoffCanvas = document.createElement('canvas');
 			window.tempoffContext = tempoffCanvas.getContext('2d');
+		}
+		if(tempoffCanvas.width != canvasWidth || tempoffCanvas.height != canvasHeight){
 			tempoffCanvas.width = canvasWidth;
 			tempoffCanvas.height = canvasHeight;
 			tempoffContext.lineWidth = 6;
 			tempoffContext.fillStyle = 'rgba(255,255,255,1)';
 			tempoffContext.strokeStyle = 'rgba(0,0,0,1)';
 		}
-		else{
-			tempoffContext.clearRect(0, 0, tempoffCanvas.width, tempoffCanvas.height)
-		}
+		tempoffContext.clearRect(0, 0, tempoffCanvas.width, tempoffCanvas.height)
+		
 
 		tempoffContext.beginPath();
 		let adjustScale = (scale/window.CURRENT_SCENE_DATA.scale_factor)	
@@ -4706,7 +4706,7 @@ function init_fog_menu(buttons){
 		`<div class='ddbc-tab-options--layout-pill'>
 			<button id='fog_paint_r' class='ddbc-tab-options__header-heading drawbutton menu-option fog-option'
 				data-shape='paint-bucket' data-function="reveal" data-unique-with="fog">
-					Bucket Fill
+					Point LoS Fill
 			</button>
 		</div>`);
 
@@ -4763,7 +4763,7 @@ function init_fog_menu(buttons){
 		`<div class='ddbc-tab-options--layout-pill'>
 			<button id='fog_paint_h' class='ddbc-tab-options__header-heading drawbutton menu-option fog-option'
 				data-shape='paint-bucket' data-function="hide" data-unique-with="fog">
-					Bucket Fill
+					Point LoS Fill
 			</button>
 		</div>`);
 
@@ -4893,7 +4893,7 @@ function init_draw_menu(buttons){
 		`<div class='ddbc-tab-options--layout-pill'>
 			<button id='paint-bucket' class='drawbutton menu-option  ddbc-tab-options__header-heading'
 				data-shape='paint-bucket' data-function="draw" data-unique-with="draw">
-				 	Bucket Fill
+				 	Point LoS Fill
 			</button>
 		</div>`);
 	}
@@ -5267,7 +5267,7 @@ function init_elev_menu(buttons){
 		`<div class='ddbc-tab-options--layout-pill'>
 			<button id='paint-bucket' class='drawbutton menu-option  ddbc-tab-options__header-heading'
 				data-shape='paint-bucket' data-function="elev" data-unique-with="draw">
-				 	Bucket Fill
+				 	Point LoS Fill
 			</button>
 		</div>`);
 	elev_menu.append("<div class='elev-input menu-subtitle'>Elevation</div>");
@@ -5407,7 +5407,7 @@ function init_vision_menu(buttons){
 		`<div class='ddbc-tab-options--layout-pill'>
 			<button id='paint-bucket' class='drawbutton menu-option  ddbc-tab-options__header-heading'
 				data-shape='paint-bucket' data-function="draw" data-unique-with="draw">
-				 	Bucket Fill
+				 	Point LoS Fill
 			</button>
 		</div>`);
 
@@ -5993,7 +5993,7 @@ function redraw_light(darknessMoved = false){
 
 	let canvas = document.getElementById("raycastingCanvas");
 	let canvasWidth = getSceneMapSize().sceneWidth;
-	let canvasHeight = getSceneMapSize().sceneHeight
+	let canvasHeight = getSceneMapSize().sceneHeight;
 
 	if(canvasWidth == 0 || canvasHeight == 0){
 		console.warn("Draw light attempted before map load");
@@ -6250,7 +6250,7 @@ function redraw_light(darknessMoved = false){
 			$(`.aura-element-container-clip[id='${auraId}'] [id*='vision_']`).toggleClass('notVisible', false);	
 			offscreenContext.globalCompositeOperation='lighten';
 			drawPolygon(offscreenContext, lightPolygon, 'rgba(255, 255, 255, 1)', true, 6, undefined, undefined, undefined, true, true, undefined, canvasWidth, canvasHeight); //draw to offscreen canvas so we don't have to render every draw and use this for a mask	
-			drawPolygon(moveOffscreenContext, movePolygon, 'rgba(255, 255, 255, 1)', true); //draw to offscreen canvas so we don't have to render every draw and use this for a mask
+			drawPolygon(moveOffscreenContext, movePolygon, 'rgba(255, 255, 255, 1)', true, 6, undefined, undefined, undefined, true, true, undefined, canvasWidth, canvasHeight); //draw to offscreen canvas so we don't have to render every draw and use this for a mask
 			
 		}
 				

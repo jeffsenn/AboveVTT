@@ -814,8 +814,9 @@ class MessageBroker {
 						let noteId = msg.data.notes[i].id;
 						window.JOURNAL.notes[noteId] = msg.data.notes[i];
 						delete window.JOURNAL.notes[noteId].id;
-						if(msg.data.notes[i].id in window.TOKEN_OBJECTS){
-							window.TOKEN_OBJECTS[msg.data.id].place();	
+						if(window.TOKEN_OBJECTS[noteId] != undefined){
+							const placedToken = $(`#tokens div[data-id='${noteId}']`);
+							window.TOKEN_OBJECTS[noteId].build_conditions(placedToken);	
 						}	
 					}			
 					window.JOURNAL.build_journal();			
@@ -1952,6 +1953,8 @@ class MessageBroker {
 						// Store current scene width and height
 						let mapHeight = await $("#scene_map").height();
 						let mapWidth = await $("#scene_map").width();
+
+	
 						window.CURRENT_SCENE_DATA.conversion = 1;
 
 						if(data.scale_check && !data.UVTTFile && !data.is_video && (mapHeight > 2500 || mapWidth > 2500)){

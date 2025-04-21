@@ -2,7 +2,7 @@ const STANDARD_CONDITIONS = ["Blinded", "Charmed", "Deafened", "Exhaustion", "Fr
 
 const CUSTOM_CONDITIONS = ["Concentration(Reminder)", 'Reaction Used',"Flying", "Burning", "Rage", "Blessed", "Baned",
 							"Bloodied", "Advantage", "Disadvantage", "Bardic Inspiration", "Hasted",
-							"#1A6AFF", "#FF7433", "#FF4D4D", "#FFD433", "#884DFF", "#86FF66"];
+							"#1A6AFF", "#FF7433", "#FF4D4D", "#FFD433", "#884DFF", "#86FF66", "#33ffe3", "#c333ff", "#1e0066", "#656565"];
 
 /*const TOKEN_COLORS=  [
 	"D1BBD7","882E72","5289C7","4EB265","CAEOAB","F6C141","E8601C","777777","AE76A3","1965BO","7BAFDE","90C987","F7F056","F1932D","DC050C",
@@ -271,7 +271,7 @@ class Token {
 	}
 
 	isMonster() {
-		if (this.options.monster === undefined) {
+		if (this.options.monster === undefined || this.options.monster == 'customStat') {
 			return false;
 		} else if (typeof this.options.monster === "string") {
 			return this.options.monster.length > 0;
@@ -1595,7 +1595,7 @@ class Token {
 		}
 		
 		const conditions = this.conditions;
-		const conditionsTotal = conditions.length + this.options.custom_conditions.length + (this.options.id in window.JOURNAL.notes && (window.DM || window.JOURNAL.notes[this.options.id].player));
+		const conditionsTotal = conditions.length + this.options.custom_conditions.length + (this.options.id in window.JOURNAL.notes && (window.DM || window.JOURNAL.notes[this.options.id].player == true || (window.JOURNAL.notes[this.options.id].player instanceof Array && window.JOURNAL.notes[this.options.id].player.includes(`${window.myUser}`))))
 
 		if (conditionsTotal > 0) {
 			let conditionCount = 0;
@@ -1743,8 +1743,8 @@ class Token {
 				const conditionDescription = CONDITIONS[conditionName];
 				let symbolImage;
 				if (conditionName.startsWith('#')) {
-					symbolImage = $(`<div class='condition-img custom-condition text' style='background: ${conditionName}'><svg  viewBox="0 0 ${symbolSize} ${symbolSize}">
-									  <text class='custom-condition-text' x="50%" y="50%">${conditionText.charAt(0)}</text>
+					symbolImage = $(`<div class='condition-img custom-condition text' style='background: ${conditionName}'><svg viewBox="0 0 100 100">
+									  <text class='custom-condition-text' font-size='80'>${conditionText.length>0 ? [...conditionText][0] : ''}</text>
 									</svg></div>`);
 				} else {
 					symbolImage = $("<img class='condition-img custom-condition' src='" + window.EXTENSION_PATH + "assets/conditons/" + conditionSymbolName + ".png'/>");
@@ -1758,7 +1758,7 @@ class Token {
 				symbolImage.width(symbolSize + "px");
 				conditionContainer.append(symbolImage);
 				badge_condition(this.options.custom_conditions[i], conditionContainer, conditionSymbolName);
-				if (conditionCount >= 3 && !singleRow) {
+				if (conditionCount % 2 != 0 && !singleRow) {
 					if (conditionSymbolName === "concentration") {
 						moreCond.prepend(conditionContainer);
 					} else {
@@ -1856,12 +1856,12 @@ class Token {
 							remove_tooltip(500);
 						}
 				
-				    });
+				    });	
 				}
 				conditionCount++;
 			}
 			// CHECK IF ADDING NOTE CONDITION
-			if (this.options.id in window.JOURNAL.notes && (window.DM || window.JOURNAL.notes[this.options.id].player)) {
+			if (this.options.id in window.JOURNAL.notes && (window.DM || window.JOURNAL.notes[this.options.id].player == true || (window.JOURNAL.notes[this.options.id].player instanceof Array && window.JOURNAL.notes[this.options.id].player.includes(`${window.myUser}`)))) {
 				console.log("aggiungerei nota");
 				const conditionName = "note"
 				const conditionContainer = $(`<div id='${conditionName}' class='condition-container' />`);
@@ -3060,10 +3060,10 @@ class Token {
 						if (get_avtt_setting_value("allowTokenMeasurement")) {
 								// Setup waypoint manager
 								// reset measuring when a new token is picked up
+								WaypointManager.cancelFadeout(true);
 								if(window.previous_measured_token != self.options.id){
 									window.previous_measured_token = self.options.id
 									WaypointManager.clearWaypoints(false);
-									WaypointManager.cancelFadeout(true);
 								}
 								let tokenMidX = parseInt(self.orig_left) + Math.round(self.options.size / 2);
 								let tokenMidY = parseInt(self.orig_top) + Math.round(self.options.size / 2);
@@ -3078,7 +3078,7 @@ class Token {
 
 								if(WaypointManager.numWaypoints > 0){
 									WaypointManager.checkNewWaypoint(tokenMidX/window.CURRENT_SCENE_DATA.scale_factor, tokenMidY/window.CURRENT_SCENE_DATA.scale_factor)
-									WaypointManager.cancelFadeout(true);
+									
 								}
 								window.BEGIN_MOUSEX = tokenMidX;
 								window.BEGIN_MOUSEY = tokenMidY;
@@ -3182,7 +3182,6 @@ class Token {
 							
 							if (allowTokenMeasurement) {
 								
-
 								if(self.isAoe() && self.options.imgsrc.match(/aoe-shape-cone|aoe-shape-line|aoe-shape-square/gi) && (window.dragSelectedTokens.length == 1 || shiftHeld)){					
 									let origin = getOrigin(self)
 									
@@ -3358,7 +3357,8 @@ class Token {
 								throttleLight();
 						});
 
-					}
+					},
+					distance: 5,
 				});
 				let classToClick = null;
 				if(this.isLineAoe()){
@@ -3992,7 +3992,12 @@ function deselect_all_tokens(ignoreVisionUpdate = false) {
 			$(`.aura-element`).show();
 	   	}
 	   	if($('#selected_token_vision .ddbc-tab-options__header-heading--is-active').length==0){
-	   		window.SelectedTokenVision = false;
+	   		if(window.SelectedTokenVision == true){
+	   			window.SelectedTokenVision = false;
+	   			if(window.DM)
+            		do_check_token_visibility(); 
+	   		}
+	   		
 	   	}	   	
   		
   	
@@ -4306,12 +4311,11 @@ function setTokenLight (token, options) {
 		const lightElement = options.sight =='devilsight' || options.sight =='truesight' ?  $(`<div class='aura-element-container-clip light' style='clip-path: ${clippath};' id='${options.id}'><div class='aura-element' id="light_${tokenId}" data-id='${options.id}' style='${lightStyles}'></div></div><div class='aura-element-container-clip vision' style='clip-path: ${devilsightClip};' id='${options.id}'><div class='aura-element darkvision' id="vision_${tokenId}" data-id='${options.id}' style='${visionStyles}'></div></div>`) : $(`<div class='aura-element-container-clip light' style='clip-path: ${clippath};' id='${options.id}'><div class='aura-element' id="light_${tokenId}" data-id='${options.id}' style='${lightStyles}'></div><div class='aura-element darkvision' id="vision_${tokenId}" data-id='${options.id}' style='${visionStyles}'></div></div>`) 
 
 		lightElement.contextmenu(function(){return false;});
-		if(visionRadius != 0 || totallight != 0 || options.player_owned || options.share_vision == true || options.share_vision == window.myUser || is_player_id(options.id)){
-			$("#light_container").prepend(lightElement);
-			if(clippath == undefined){
-				debounceLightChecks();
-			}
+		$("#light_container").prepend(lightElement);
+		if(clippath == undefined){
+			debounceLightChecks();
 		}
+		
 		
 
 		if(options.animation?.light && options.animation?.light != 'none'){
