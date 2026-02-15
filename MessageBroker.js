@@ -665,6 +665,10 @@ class MessageBroker {
 					deleteExploredScene(msg.data.sceneId)
 				}
 			}
+			if (msg.eventType == "custom/myVTT/campaignData"){
+				window.AVTT_CAMPAIGN_INFO = msg.data;
+				window.MB.checkHideSceneFromPlayers();
+			}
 			if(msg.eventType == "custom/myVTT/place-extras-token"){
 				if(window.DM){
 					let left = parseInt(msg.data.centerView.x);
@@ -673,6 +677,23 @@ class MessageBroker {
 					fetch_and_cache_monsters([monsterId], function(){
 						create_and_place_token(window.cached_monster_items[monsterId], undefined, undefined, left, top, undefined, undefined, true, msg.data.extraOptions)
 					});
+				}
+			}
+			if(msg.eventType == "custom/myVTT/createTimer"){
+				const {type, message, startTime, duration, remove} = msg.data;
+				if(type === "gamelog"){
+					create_gamelog_timer(message, duration, startTime)
+				}
+				else if(type === "combatTracker"){
+					if(remove){
+						$('.ctTimer').remove();
+						if (combatTrackerTimerId) {
+							clearInterval(combatTrackerTimerId);
+							combatTrackerTimerId = null;
+						}
+						return;
+					}
+					create_combat_tracker_timer(duration, startTime)
 				}
 			}
 			if (msg.eventType == "custom/myVTT/open-url-embed"){
@@ -696,9 +717,11 @@ class MessageBroker {
 						window.handleSceneQueue.push(msg);
 					}
 					else{
+						window.LOADING = true;
 						AboveApi.getScene(msg.data.sceneid).then((response) => {
 							self.handleScene(response);
 						}).catch((error) => {
+							delete window.LOADING;
 							console.error("Failed to download scene", error);
 						});
 					}
@@ -1623,18 +1646,35 @@ class MessageBroker {
 		self.loadAboveWS(notify_player_join);
 
 	}
-
+	checkHideSceneFromPlayers(){
+		$('#hidden-scenes-message').remove();
+		if (window.AVTT_CAMPAIGN_INFO?.hidePlayersScene == 1 && !window.DM) {
+			let hiddenMessage;
+			if (window.myUser != window.CAMPAIGN_INFO.dmId) {
+				$('#VTT').toggleClass('hide-players', true);
+				hiddenMessage = `<div id="hidden-scenes-message">The DM currently has the map hidden from players.</div>`;
+			} else {
+				hiddenMessage = `<div id="hidden-scenes-message">You have scenes hidden from players (DM user can still preview).</div>`;
+			}
+			$('body').append(hiddenMessage);
+		} else {
+			$('#VTT').toggleClass('hide-players', false);	
+		}
+	}
 	async handleScene (msg, forceRefresh=false) {
 		console.debug("handlescene", msg);
+		window.LOADING = true;
+		window.MB.checkHideSceneFromPlayers();
 		try{
 			if(msg.data.scale_factor == undefined || msg.data.scale_factor == ''){
 				msg.data.scale_factor = 1;
 			}
+			window.CURRENT_SCENE_DATA.conversion = window.CURRENT_SCENE_DATA.conversion || 1;
 			let isCurrentScene = window.CURRENT_SCENE_DATA?.id != undefined && msg.data.id == window.CURRENT_SCENE_DATA.id
 			let dmMapEqual = msg.data.dm_map == window.CURRENT_SCENE_DATA.dm_map && msg.data.dm_map_usable == '1' || msg.data.player_map == window.CURRENT_SCENE_DATA.player_map && msg.data.dm_map_usable == '0'
 			let dmMapToggleEqual = msg.data.dm_map_usable == window.CURRENT_SCENE_DATA.dm_map_usable
 			let playerMapEqual = msg.data.player_map == window.CURRENT_SCENE_DATA.player_map
-			let scaleFactorEqual = (msg.data.scale_factor == window.CURRENT_SCENE_DATA.scale_factor*window.CURRENT_SCENE_DATA.conversion ||
+			let scaleFactorEqual = (msg.data.scale_factor/window.CURRENT_SCENE_DATA.conversion == window.CURRENT_SCENE_DATA.scale_factor ||
 																		(msg.data.UVTTFile == 1  && msg.data.scale_factor == window.CURRENT_SCENE_DATA.scale_factor) || 
 																		((msg.data.scale_factor == undefined || msg.data.scale_factor=='') && window.CURRENT_SCENE_DATA.scale_factor*window.CURRENT_SCENE_DATA.conversion == 1))
 			let hppsEqual = window.CURRENT_SCENE_DATA.hpps==parseFloat(msg.data.hpps*msg.data.scale_factor)
@@ -1676,7 +1716,7 @@ class MessageBroker {
 				$("#VTT").css("--scene-scale", scaleFactor)
 				window.CURRENT_SCENE_DATA.width = mapWidth;
 				window.CURRENT_SCENE_DATA.height = mapHeight;
-				
+				await reset_canvas(false);
 
 				if(!isSameTokenLight){
 					for(let i in window.TOKEN_OBJECTS){
@@ -1684,7 +1724,7 @@ class MessageBroker {
 						setTokenLight(token, window.TOKEN_OBJECTS[i].options);
 					}
 				}
-				await reset_canvas(false);
+				
 				if(!window.DM || window.SelectedTokenVision)
 					check_token_visibility();
 			}
@@ -1785,7 +1825,6 @@ class MessageBroker {
 					else {
 						window.DRAWINGS = [];
 					}
-					window.LOADING = true;
 					if(!window.DM && (data.player_map_is_video == '1' || data.player_map?.includes('youtube.com') || data.player_map?.includes("youtu.be") || data.is_video == '1')){
 						data.map = data.player_map;
 						data.is_video = data.player_map_is_video;
@@ -1804,7 +1843,7 @@ class MessageBroker {
 	
 						window.CURRENT_SCENE_DATA.conversion = 1;
 
-						if(!data.is_video && (mapHeight > 2500 || mapWidth > 2500)){
+						if (!data.is_video && (mapHeight > 2500 || mapWidth > 2500)){
 							let conversion = 2;
 							if(mapWidth >= mapHeight){
 								conversion = 1980 / mapWidth;
@@ -1968,6 +2007,7 @@ class MessageBroker {
 			}
 		}
 		catch (e) {
+			delete window.LOADING;
 			window.MB.loadNextScene();
 			remove_loading_overlay();
 			showError(e);
@@ -1979,12 +2019,17 @@ class MessageBroker {
 		if (window.handleSceneQueue == undefined || window.handleSceneQueue?.length == 0)
 			return;
 		const msg = window.handleSceneQueue.pop(); // get most recent item and load it
+		if(msg.data.sceneid == window.CURRENT_SCENE_DATA.id){ 
+			this.loadNextScene();
+			return;
+		}
 		window.handleSceneQueue = [];
+		window.LOADING = true;
 		AboveApi.getScene(msg.data.sceneid).then((response) => {
 			window.MB.handleScene(response);
 		}).catch((error) => {
 			if (window.handleSceneQueue?.length > 0) {
-				setTimeout(loadNextScene, 100);
+				setTimeout(window.MB.loadNextScene, 100);
 			}
 			console.error("Failed to download scene", error);
 		});
@@ -1994,7 +2039,6 @@ class MessageBroker {
 		if(getCombatTrackerSettings().next_turn_indicator == '1'){
 			this.handleNextTurnIndicator();
 		}
-			
 	}
 
 	handleNextTurnIndicator() {
@@ -2554,6 +2598,7 @@ class MessageBroker {
 	  $("#reconnect-button").on("click", function(){
 	  	window.onCloseNumberPerPopup = 0;
 	  	window.MB.loadAboveWS(function(){ 
+			window.LOADING = true;
 	  		AboveApi.getScene(window.CURRENT_SCENE_DATA.id).then((response) => {
 	  			window.MB.handleScene(response, true);
 	  			setTimeout(
@@ -2568,6 +2613,7 @@ class MessageBroker {
 	  				}, 4000)
 	  			removeError();
 	  		}).catch((error) => {
+				delete window.LOADING;
 	  			console.error("Failed to download scene", error);
 	  		});
   		}, true);	

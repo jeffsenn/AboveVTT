@@ -1507,16 +1507,20 @@ async function create_and_place_token(listItem, hidden = undefined, specificImag
                 temp: 0
             };
         }
-        let newStatBlockInit = searchText.matchAll(/Initiative[\s\S]*?[\s>]([+-][0-9]+)/gi).next()
+        let newStatBlockInit = searchText.matchAll(/Initiative[\s\S]*?([\s>]([+-][0-9]+)|[\s>(](\d+)\)?)/gi).next()
 
         if(newStatBlockInit.value != undefined){
-            if(newStatBlockInit.value[1] != undefined)
-                options.customInit = newStatBlockInit.value[1];
+            options.customInit = newStatBlockInit.value[2];
+            options.customInitStatic = newStatBlockInit.value[3]; 
         }        
 
         const newInit = $(searchText).find('.custom-initiative.custom-stat').text();
         if(newInit){
-            options.customInit = newInit
+            const match = newInit.matchAll(/([+-][0-9]+)|(\d+)/gi).next()
+            if(match.value != undefined){
+                options.customInit = match.value[1];
+                options.customInitStatic = match.value[2]; 
+            }
         }
 
         let newAC = $(searchText).find('.custom-ac.custom-stat').text();
@@ -3005,6 +3009,14 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
     });
     inputWrapper.append(imageZoomWrapper);
 
+    let startingTokenFlip = targetOptions.targetFlip || 0;
+    let tokenFlipWrapper = build_token_flip_input(startingTokenFlip, function (tokenFlip) { 
+        customization.setTokenOption("tokenFlip", tokenFlip);
+        persist_token_customization(customization);
+        decorate_modal_images(sidebarPanel, listItem, placedToken);  
+    });
+    inputWrapper.append(tokenFlipWrapper);
+     
     let startingOpacity = targetOptions.imageOpacity || 1;
     let opacityWrapper = build_token_num_input(startingOpacity, tokens,  'Image Opacity', 0, 1, 0.1, function (opacity) {
         customization.setTokenOption("imageOpacity", opacity);
