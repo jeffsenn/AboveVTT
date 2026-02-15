@@ -645,6 +645,7 @@ class Token {
 	}
 	tinyToken() {
 		return (Math.round(parseFloat(this.options.gridSquares)*2)/2 < 1) || this.isAoe();
+	}
 	isPlayerLocked() {
 		return !window.DM && (this.options.restrictPlayerMove || this.options.locked) && !this.isCurrentPlayer();
 	}
