@@ -2113,7 +2113,14 @@ function setVisionLightOffscreenCanvas(){
 		window.offScreenCombine2.width = sceneWidth;
 		window.offScreenCombine2.height = sceneHeight;
 	}
-
+	if (window.lightInLos == undefined) {
+		window.lightInLos = new OffscreenCanvas(sceneWidth, sceneHeight);
+		window.lightInLosContext = window.lightInLos.getContext('2d');
+	}
+	else {
+		window.lightInLos.width = sceneWidth;
+		window.lightInLos.height = sceneHeight;
+	}
 }
 function redraw_light_walls(clear=true, editingWallPoints = false){
 	let showWallsToggle = $('#show_walls').hasClass('button-enabled');
@@ -7311,17 +7318,8 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 	window.moveOffscreenCanvasMask.width = canvasWidth;
 	window.moveOffscreenCanvasMask.height = canvasHeight;
 
+	window.lightInLosContext.clearRect(0, 0, canvasWidth, canvasHeight);
 
-	if(window.lightInLos == undefined){
-		window.lightInLos = new OffscreenCanvas(canvasWidth, canvasHeight);
-		window.lightInLosContext = window.lightInLos.getContext('2d');
-	}
-	window.lightInLosContext.clearRect(0, 0, window.lightInLos.width, window.lightInLos.width.height);
-	window.lightInLos.width = canvasWidth;
-	window.lightInLos.height = canvasHeight;
-
-
-	
 
 	if(window.CURRENT_SCENE_DATA.disableSceneVision == true){
 		context.fillStyle = "white";
@@ -7424,12 +7422,6 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 
 	const adjustScale = (window.CURRENT_SCENE_DATA.scale_factor != undefined) ? window.CURRENT_SCENE_DATA.scale_factor : 1;
 
-
-
-
-
-
-
 	if (window.elevContext == undefined) {
 		window.elevContext = $('#elev_overlay')[0].getContext('2d');
 	}
@@ -7503,11 +7495,7 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 				elev: window.TOKEN_OBJECTS[auraId].options.elev
 			}
 
-
 			$(`.aura-element-container-clip[id='${auraId}']:not(.vision)`).css('clip-path', `polygon(${pts})`)
-
-
-
 
 			if (window.lineOfSightPolygons[auraId] !== undefined && (window.TOKEN_OBJECTS[auraId].options.sight === 'devilsight' || window.TOKEN_OBJECTS[auraId].options.sight === 'truesight')) {
 				let pts = window.noDarknessPolygon
@@ -7524,14 +7512,13 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 			clipped_light(auraId, window.lightPolygon, playerTokenId, canvasWidth, canvasHeight, darknessBoundarys, selectedIds.length);
 		}
 
-
-
-		
+		combineCtx.clearRect(0, 0, canvasWidth, canvasHeight);
 		combineCtx2.clearRect(0, 0, canvasWidth, canvasHeight);
 		combineCtx2.globalCompositeOperation = "source-over";
 		drawPolygon(combineCtx2, window.lightPolygon, "#FFF", true);
 		combineCtx2.globalCompositeOperation = "destination-out";
 		drawPolygon(combineCtx2, window.lightPolygon, "#000", false, 10);
+
 
 		if (window.lightAuraClipPolygon[auraId]?.light !== undefined) {
 			combineCtx.globalCompositeOperation = 'lighten';
@@ -7539,6 +7526,8 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 			drawCircle(combineCtx, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].light1.range, window.lightAuraClipPolygon[auraId].light1.color)		
 			combineCtx.globalCompositeOperation = 'destination-in';
 			combineCtx.drawImage(offScreenCombine2, 0, 0);
+			lightInLosContext.globalCompositeOperation = "lighten";
+			lightInLosContext.drawImage(offScreenCombine, 0, 0);
 		}
 
 
@@ -7580,20 +7569,16 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 				drawCircle(combineCtx, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].darkvision, window.lightAuraClipPolygon[auraId].vision.color);
 				combineCtx.globalCompositeOperation = 'destination-in';
 				combineCtx.drawImage(offScreenCombine2, 0, 0);
-
+				lightInLosContext.globalCompositeOperation = "lighten";
+				lightInLosContext.drawImage(offScreenCombine, 0, 0);
 			}
 
 			$(`.aura-element-container-clip[id='${auraId}'] [id*='vision_']`).toggleClass('notVisible', false);
 			offscreenContext.globalCompositeOperation = "lighten";
 			drawPolygon(offscreenContext, window.lightPolygon, 'rgba(255, 255, 255, 1)', true, 6, undefined, undefined, undefined, true, true); //draw to offscreen canvas so we don't have to render every draw and use this for a mask	
 			drawPolygon(moveOffscreenContext, window.movePolygon, 'rgba(255, 255, 255, 1)', true, 6, undefined, undefined, undefined, true, true); //draw to offscreen canvas so we don't have to render every draw and use this for a mask
-
 		}
-
 	}
-	lightInLosContext.globalCompositeOperation = "lighten";
-	lightInLosContext.drawImage(offScreenCombine, 0, 0);
-
 
 	const tokenObjectValues = Object.values(window.TOKEN_OBJECTS);
 	const aPlayerTokenExists = tokenObjectValues.some(d => d.options.id.startsWith('/profile'))
@@ -7608,13 +7593,6 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 		moveOffscreenContext.fillRect(0, 0, canvasWidth, canvasHeight);
 	} 
 
-	
-
-	
-
-	
-	
-
 	lightInLosContext.globalCompositeOperation='source-over';
 	if(window.CURRENT_SCENE_DATA.darkness_filter == 0){
 
@@ -7627,9 +7605,7 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 			draw_darkness_aoe_to_canvas(lightInLosContext);
 	
 			lightInLosContext.globalCompositeOperation='source-over';	
-			lightInLosContext.drawImage(devilsightCanvas, 0, 0);
-
-			
+			lightInLosContext.drawImage(devilsightCanvas, 0, 0);		
 
 			truesightCanvasContext.globalCompositeOperation='destination-in';
 			truesightCanvasContext.drawImage(offscreenCanvasMask, 0, 0);
@@ -7706,12 +7682,9 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 			debounceStoreExplored(exploredCanvas, window.CURRENT_SCENE_DATA.id);
 		}
 	
-	}
-
-	else{
+	} else{
 		$('#exploredCanvas').remove();
 	}
-	
 	
 	if(!window.DM || window.SelectedTokenVision){
 		throttleTokenCheck();	
@@ -7720,15 +7693,11 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 	if(window.CURRENTLY_SELECTED_TOKENS.length > 0){
 		debounceAudioChecks();
 	}
-	
-	
-
 }
+
 function getTokenVision(tokenId, darknessMoved){
 	if(window.lineOfSightPolygons[tokenId] !== undefined)
 		return window.lineOfSightPolygons[tokenId];
-
-
 
 	if(window.PARTICLE == undefined){
 		initParticle(new Vector(200, 200), 1);
