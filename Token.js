@@ -3015,7 +3015,7 @@ class Token {
 				};
 			 	
 				let ctx;
-
+				let dragStopTimer;
 				tok.draggable({
 					stop: function (event) {
 							event.stopPropagation();						
@@ -3026,7 +3026,7 @@ class Token {
 								self.sync($.extend(true, {}, self.options));
 							}
 							
-						let darknessMoved = (self.options.darkness || self.options.tokenWall) ? true : false;
+							let darknessMoved = (self.options.darkness || self.options.tokenWall) ? true : false;
 							if (self.selected ) {
 								for (let tok of window.dragSelectedTokens){
 									let id = $(tok).attr("data-id");	
@@ -3068,13 +3068,11 @@ class Token {
 							window.toggleSnap=false;
 
 							pauseCursorEventListener = false;
-							setTimeout(() => {
-								if(!window.DRAGGING){
-									window.dragSelectedTokens?.removeClass("pause_click")
-									delete window.playerTokenAuraIsLight;
-									delete window.dragSelectedTokens;
-									delete window.orig_zoom;
-								}
+							dragStopTimer = setTimeout(() => {
+								$(".pause_click")?.removeClass("pause_click")
+								delete window.playerTokenAuraIsLight;
+								delete window.dragSelectedTokens;
+								delete window.orig_zoom;
 							}, 200)
 							debounceAudioChecks();
 						},
@@ -3090,6 +3088,8 @@ class Token {
 						window.DRAGGING = true;
 						if (contextMenuLongPressTimer)
 							clearTimeout(contextMenuLongPressTimer);
+						if (dragStopTimer)
+							clearTimeout(dragStopTimer);
 						window.oldTokenPosition = {};
 						
 						self.prepareWalkableArea()
@@ -3920,29 +3920,33 @@ function place_token_at_map_point(tokenObject, x, y, forcePlaceAndSize = false, 
 	}
 
 	if (options.size == undefined || forcePlaceAndSize) {
-		delete options.gridSquares;
-		if (options.tokenSize != undefined && parseFloat(options.tokenSize) != NaN) {
+		
+
+		if (options.gridSquares != undefined && parseFloat(options.gridSquares) != NaN){
+			options.size = window.CURRENT_SCENE_DATA.hpps * parseFloat(options.gridSquares);
+		}
+		else if (options.tokenSize != undefined && parseFloat(options.tokenSize) != NaN) {
 			// tokenSize was specified, convert it to size. tokenSize is the number of squares this token fills
-			options.size = Math.round(window.CURRENT_SCENE_DATA.hpps) * parseFloat(options.tokenSize);
+			options.size = window.CURRENT_SCENE_DATA.hpps * parseFloat(options.tokenSize);
 		} 
 		else if (options.sizeId != undefined) {
 			// sizeId was specified, convert it to size. This is used when adding from the monster pane
 			if (options.sizeId == 2) {
-				options.size = Math.round(window.CURRENT_SCENE_DATA.hpps) * 0.5;
+				options.size = window.CURRENT_SCENE_DATA.hpps * 0.5;
 			} else if (options.sizeId == 5) {
-				options.size = Math.round(window.CURRENT_SCENE_DATA.hpps) * 2;
+				options.size = window.CURRENT_SCENE_DATA.hpps * 2;
 			} else if (options.sizeId == 6) {
-				options.size = Math.round(window.CURRENT_SCENE_DATA.hpps) * 3;
+				options.size = window.CURRENT_SCENE_DATA.hpps * 3;
 			} else if (options.sizeId == 7) {
-				options.size = Math.round(window.CURRENT_SCENE_DATA.hpps) * 4;
+				options.size = window.CURRENT_SCENE_DATA.hpps * 4;
 			} else {
 				// default to small/medium size
-				options.size = Math.round(window.CURRENT_SCENE_DATA.hpps) * 1;
+				options.size = window.CURRENT_SCENE_DATA.hpps * 1;
 			}
 		} 
 		else {
 			// default to small/medium size
-			options.size = Math.round(window.CURRENT_SCENE_DATA.hpps) * 1;
+			options.size = window.CURRENT_SCENE_DATA.hpps * 1;
 		}
 	}
 
@@ -5334,9 +5338,14 @@ function paste_selected_walls(x, y) {
 }
 function copy_selected_tokens(teleporterTokenId=undefined) {
 	if(teleporterTokenId){
+		const selectedTokens = window.CURRENTLY_SELECTED_TOKENS.slice(0);
+		const tokens = {};
+		for(let id of selectedTokens){
+			tokens[id] = $.extend(true, {}, window.TOKEN_OBJECTS[id])
+		}
 		window.TELEPORTER_PASTE_BUFFER = {
 			'targetToken': teleporterTokenId,
-			'tokens': window.CURRENTLY_SELECTED_TOKENS.slice(0)
+			'tokens': tokens
 		}
 	}
 	else{
@@ -5369,22 +5378,20 @@ function copy_selected_tokens(teleporterTokenId=undefined) {
 	
 }
 
-function paste_selected_tokens(x, y, teleporter=undefined) {
+function paste_selected_tokens(x, y, teleporter = undefined, teleportedTokenData=undefined) {
 	if (!teleporter && !window.DM) return;
 	if (window.TOKEN_PASTE_BUFFER == undefined) {
 		window.TOKEN_PASTE_BUFFER = [];
 	}
 	deselect_all_tokens();
 	if(teleporter){
-		for (let i in window.TELEPORTER_PASTE_BUFFER.tokens) {
-			const id = window.TELEPORTER_PASTE_BUFFER.tokens[i];
-			let token = window.TOKEN_OBJECTS[id] != undefined ? window.TOKEN_OBJECTS[id] : window.all_token_objects[id];
-			if(token == undefined) continue;
-			let options = $.extend(true, {}, token.options);
+		for (let i in window.TELEPORTER_PASTE_BUFFER.tokens) {	
+			let options = $.extend(true, {}, window.TELEPORTER_PASTE_BUFFER.tokens[i].options);
+			window.all_token_objects[i].options = options;
             const forceSize = true;
 			const animationDuration = 0;
 			place_token_at_map_point(options, x, y, forceSize, animationDuration);	
-			window.TOKEN_OBJECTS[id].selected = true;			
+			window.TOKEN_OBJECTS[i].selected = true;			
 		}
 		window.TELEPORTER_PASTE_BUFFER = undefined;
 	}

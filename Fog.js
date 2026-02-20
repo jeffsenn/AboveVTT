@@ -682,12 +682,21 @@ function is_token_under_light_aura(tokenid, lightContext=undefined){
 	return  false;
 }
 
-function is_token_under_truesight_aura(tokenid, truesightContext=undefined){
-	if(truesightContext == undefined){
-		truesightContext = window.truesightCanvas.getContext('2d');
+function is_token_under_truesight_aura(tokenid, imageData){
+	if (imageData == undefined)
+		return
+	let x = parseInt(window.TOKEN_OBJECTS[tokenid].options.left) / window.CURRENT_SCENE_DATA.scale_factor;
+	let y = parseInt(window.TOKEN_OBJECTS[tokenid].options.top) / window.CURRENT_SCENE_DATA.scale_factor;
+	const right = parseInt(x+(window.TOKEN_OBJECTS[tokenid].sizeWidth() / window.CURRENT_SCENE_DATA.scale_factor));
+	const bottom = parseInt(y+(window.TOKEN_OBJECTS[tokenid].sizeHeight() / window.CURRENT_SCENE_DATA.scale_factor));
+	let pixeldata = []
+	for (; x < right; x++) {
+		for (; y < bottom; y++) {
+			const data = getPixelFromImageData(imageData, x, y)
+			pixeldata = pixeldata.concat(data);
+		}
 	}
 
-	let pixeldata = truesightContext.getImageData(parseInt(window.TOKEN_OBJECTS[tokenid].options.left)/ window.CURRENT_SCENE_DATA.scale_factor, parseInt(window.TOKEN_OBJECTS[tokenid].options.top)/ window.CURRENT_SCENE_DATA.scale_factor, window.TOKEN_OBJECTS[tokenid].sizeWidth()/ window.CURRENT_SCENE_DATA.scale_factor, window.TOKEN_OBJECTS[tokenid].sizeHeight()/ window.CURRENT_SCENE_DATA.scale_factor).data;
 	
 	for(let i=0; i<pixeldata.length; i+=4){
 		if(pixeldata[i]>4 || pixeldata[i+1]>4 || pixeldata[i+2]>4)
@@ -791,7 +800,9 @@ function check_single_token_visibility(id){
 	
 	let inTruesight = false;
 	if(window.TOKEN_OBJECTS[id].conditions.includes('Invisible') && $(`.aura-element-container-clip.truesight`).length>0 ){
-		inTruesight = is_token_under_truesight_aura(id);
+		const truesightContext = window.truesightCanvas.getContext('2d');
+		const truesightData = truesightContext.getImageData(0, 0, window.truesightCanvas.width, window.truesightCanvas.height);
+		inTruesight = is_token_under_truesight_aura(id, truesightData);
 	}
 	if (showThisPlayerToken !== true && (hideThisTokenInFogOrDarkness === true && inVisibleLight !== true || (window.TOKEN_OBJECTS[id].options.hidden === true && inTruesight !== true) || (hideInvisible === true && inTruesight !== true))) {
 		$(selector + "," + auraSelector).hide();
@@ -903,10 +914,11 @@ function do_check_token_visibility() {
 	const truesightAuraExists = $(`.aura-element-container-clip.truesight`).length > 0;
 
 	let truesightContext;
-
+	let truesightData;
 	if (truesightAuraExists){
 		offScreenCtx.drawImage(truesightCanvas, 0, 0);
 		truesightContext = window.truesightCanvas.getContext('2d');
+		truesightData = truesightContext.getImageData(0, 0, window.truesightCanvas.width, window.truesightCanvas.height);
 	}
 
 
@@ -917,7 +929,7 @@ function do_check_token_visibility() {
 
 
 	const offscreenImageData = offScreenCtx.getImageData(0, 0, offScreenCanvas.width, offScreenCanvas.height);
-	
+
 
 	for (let id in window.TOKEN_OBJECTS) {
 		if(window.TOKEN_OBJECTS[id].options.combatGroupToken || window.TOKEN_OBJECTS[id].options.type != undefined)
@@ -944,7 +956,7 @@ function do_check_token_visibility() {
 
 		let inTruesight = false;
 		if(window.TOKEN_OBJECTS[id].conditions.includes('Invisible') && truesightAuraExists){
-			inTruesight = is_token_under_truesight_aura(id, truesightContext);
+			inTruesight = is_token_under_truesight_aura(id, truesightData);
 		}
 
 		if (showThisPlayerToken !== true && ((hideThisTokenInFogOrDarkness === true && inVisibleLight !== true && dmSelected !== true) || (window.TOKEN_OBJECTS[id].options.hidden === true && inTruesight !== true && dmSelected !== true) || (hideInvisible === true && inTruesight !== true))) {
@@ -2096,16 +2108,13 @@ function setVisionLightOffscreenCanvas(){
 			window[name].height = sceneHeight;
 		}
 	}
-	create_or_set_offscreen_canvas('bucketFillCanvas');
-	create_or_set_offscreen_canvas('particleOffScreenCombine', false);
-	create_or_set_offscreen_canvas('offScreenCombine', false);
+
+	create_or_set_offscreen_canvas('offScreenCombine');
 	create_or_set_offscreen_canvas('lightInLos');
 	create_or_set_offscreen_canvas('offscreenCanvasMask');
 	create_or_set_offscreen_canvas('moveOffscreenCanvasMask', true, true);
-	create_or_set_offscreen_canvas('truesightCanvas');
-	create_or_set_offscreen_canvas('tempDarknessCanvas');
 	create_or_set_offscreen_canvas('devilsightCanvas');
-	create_or_set_offscreen_canvas('tempDarkvisionCanvas');
+	create_or_set_offscreen_canvas('truesightCanvas');
 }
 function redraw_light_walls(clear=true, editingWallPoints = false){
 	let showWallsToggle = $('#show_walls').hasClass('button-enabled');
@@ -5192,7 +5201,7 @@ function bucketFill(ctx, mouseX, mouseY, fogStyle = 'rgba(0,0,0,0)', fogType = 0
 
 	const isBlur = parseInt(blur) > 0;
 	
-	const bucketFillCtx = window.bucketFillCanvasContext;
+	const bucketFillCtx = window.offScreenCombineContext;
 	bucketFillCtx.clearRect(0, 0, bucketFillCtx.canvas.width, bucketFillCtx.canvas.height);
 	bucketFillCtx.globalCompositeOperation = "lighten";
 	bucketFillCtx.filter = isBlur ? `blur(${parseInt(blur)}px)` : `none`;
@@ -5249,7 +5258,7 @@ function bucketFill(ctx, mouseX, mouseY, fogStyle = 'rgba(0,0,0,0)', fogType = 0
 	}
 
 	ctx.globalCompositeOperation = 'lighten';
-	ctx.drawImage(window.bucketFillCanvas, 0, 0);
+	ctx.drawImage(window.offScreenCombine, 0, 0);
 
 
 }
@@ -7156,7 +7165,7 @@ function particleLook(ctx, walls, lightRadius=100000, fog=false, fogStyle, fogTy
 
 
 						const isBlur = parseInt(blur) > 0;
-						combineCtx = window.particleOffScreenCombine.getContext('2d');
+						combineCtx = window.offScreenCombineContext;
 						combineCtx.clearRect(0, 0, canvasWidth, canvasHeight);
 						combineCtx.globalCompositeOperation = "source-over";
 
@@ -7174,7 +7183,7 @@ function particleLook(ctx, walls, lightRadius=100000, fog=false, fogStyle, fogTy
 						drawPolygon(combineCtx, lightPolygon, "#000", false, 10);
 						ctx.save();
 						ctx.globalCompositeOperation = 'lighten';
-						ctx.drawImage(window.particleOffScreenCombine, 0, 0);
+						ctx.drawImage(window.offScreenCombine, 0, 0);
 						ctx.restore();
 						return;
 					}
@@ -7304,14 +7313,6 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 	const devilsightCanvas = window.devilsightCanvas;
 	const devilsightCanvasContext = window.devilsightCanvasContext;
 	devilsightCanvasContext.clearRect(0,0,canvasWidth,canvasHeight);
-
-	const tempDarkvisionCanvas = window.tempDarkvisionCanvas;
-	const tempDarkvisionCanvasContext = window.tempDarkvisionCanvasContext;
-	tempDarkvisionCanvasContext.clearRect(0,0,canvasWidth,canvasHeight);
-
-	const tempDarknessCanvas = window.tempDarknessCanvas;
-	const tempDarknessCanvasContext = window.tempDarknessCanvasContext;
-	tempDarknessCanvasContext.clearRect(0, 0, canvasWidth, canvasHeight);
 
 	let darknessBoundarys = getDarknessBoundarys();
 	
@@ -7449,44 +7450,46 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 		if (selectedIds.length === 0 || found || (window.SelectedTokenVision !== true && !window.DM)) {
 
 			let hideVisionWhenNoPlayerToken = (playerTokenId === undefined && !window.TOKEN_OBJECTS[auraId].options.share_vision && !window.DM && window.TOKEN_OBJECTS[auraId].options.itemType !== 'pc')
-			if (hideVisionWhenNoPlayerToken) //when player token does not exist show vision for all pc tokens and shared vision for other tokens. Mostly used by DM's, streams and tabletop tv games.			
-				continue;//we don't want to draw this tokens vision no need for further checks - go next token.
-
+		
 
 			let hideVisionWhenPlayerTokenExists = (auraId.includes(window.PLAYER_ID) !== true && window.DM !== true && window.TOKEN_OBJECTS[auraId].options.share_vision !== true && window.TOKEN_OBJECTS[auraId].options.share_vision != window.myUser && playerTokenId !== undefined)
+			if (!hideVisionWhenNoPlayerToken && !hideVisionWhenPlayerTokenExists) {
+				//when player token does not exist show vision for all pc tokens and shared vision for other tokens. Mostly used by DM's, streams and tabletop tv games.
+				//when player token does exist show your own vision and shared vision.
+				if (window.DM !== true || window.SelectedTokenVision === true) {
 
-			if (hideVisionWhenPlayerTokenExists)	//when player token does exist show your own vision and shared vision.
-				continue; //we don't want to draw this tokens vision - go next token.
+					if (window.lightAuraClipPolygon[auraId] != undefined && (window.TOKEN_OBJECTS[auraId].options.sight === 'devilsight' || window.TOKEN_OBJECTS[auraId].options.sight === 'truesight')) {
+						combineCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+						combineCtx.globalCompositeOperation = 'source-over';
+						drawCircle(combineCtx, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].darkvision, window.lightAuraClipPolygon[auraId].vision.color)
+						combineCtx.globalCompositeOperation = 'destination-in';
+						drawPolygon(combineCtx, window.noDarknessPolygon, 'rgba(255, 255, 255, 1)', true);
+						combineCtx.globalCompositeOperation = "destination-out";
+						drawPolygon(combineCtx, window.lightPolygon, "#000", false, 10);
+						offscreenContext.globalCompositeOperation = 'source-over';
+						offscreenContext.drawImage(offScreenCombine, 0, 0)
+					}
+					if (window.TOKEN_OBJECTS[auraId].options.sight === 'devilsight') {
+						devilsightCanvasContext.globalCompositeOperation = 'source-over';
+						devilsightCanvasContext.drawImage(offScreenCombine, 0, 0);
+					}
+					if (window.TOKEN_OBJECTS[auraId].options.sight === 'truesight') {
+						truesightCanvasContext.globalCompositeOperation = 'source-over';
+						truesightCanvasContext.drawImage(offScreenCombine, 0, 0);
+					}
 
-			if (window.DM !== true || window.SelectedTokenVision === true) {
-				if (window.lightAuraClipPolygon[auraId] != undefined && (window.TOKEN_OBJECTS[auraId].options.sight === 'devilsight' || window.TOKEN_OBJECTS[auraId].options.sight === 'truesight')) {
-					tempDarkvisionCanvasContext.globalCompositeOperation = 'source-over';
-					drawCircle(tempDarkvisionCanvasContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].darkvision, 'white')
+				}
 
-					tempDarkvisionCanvasContext.globalCompositeOperation = 'destination-in';
-					drawPolygon(tempDarkvisionCanvasContext, window.noDarknessPolygon, 'rgba(255, 255, 255, 1)', true);
-					offscreenContext.globalCompositeOperation = 'source-over';
-					offscreenContext.drawImage(tempDarkvisionCanvas, 0, 0)
+				if (window.lightAuraClipPolygon[auraId]?.darkvision !== undefined) {
+					drawDarkVision = true;
 				}
-				if (window.TOKEN_OBJECTS[auraId].options.sight === 'devilsight') {
-					devilsightCanvasContext.globalCompositeOperation = 'source-over';
-					devilsightCanvasContext.drawImage(tempDarkvisionCanvas, 0, 0);
-				}
-				if (window.TOKEN_OBJECTS[auraId].options.sight === 'truesight') {
-					truesightCanvasContext.globalCompositeOperation = 'source-over';
-					truesightCanvasContext.drawImage(tempDarkvisionCanvas, 0, 0);
-				}
+
+				$(`.aura-element-container-clip[id='${auraId}'] [id*='vision_']`).toggleClass('notVisible', false);
+				offscreenContext.globalCompositeOperation = "lighten";
+				drawPolygon(offscreenContext, window.lightPolygon, 'rgba(255, 255, 255, 1)', true, 6, undefined, undefined, undefined, true, true); //draw to offscreen canvas so we don't have to render every draw and use this for a mask	
+				drawPolygon(moveOffscreenCanvasMaskContext, window.movePolygon, 'rgba(255, 255, 255, 1)', true, 6, undefined, undefined, undefined, true, true); //draw to offscreen canvas so we don't have to render every draw and use this for a mask
 
 			}
-
-			if (window.lightAuraClipPolygon[auraId]?.darkvision !== undefined) {
-				drawDarkVision = true;
-			}
-
-			$(`.aura-element-container-clip[id='${auraId}'] [id*='vision_']`).toggleClass('notVisible', false);
-			offscreenContext.globalCompositeOperation = "lighten";
-			drawPolygon(offscreenContext, window.lightPolygon, 'rgba(255, 255, 255, 1)', true, 6, undefined, undefined, undefined, true, true); //draw to offscreen canvas so we don't have to render every draw and use this for a mask	
-			drawPolygon(moveOffscreenCanvasMaskContext, window.movePolygon, 'rgba(255, 255, 255, 1)', true, 6, undefined, undefined, undefined, true, true); //draw to offscreen canvas so we don't have to render every draw and use this for a mask
 		}
 		if (drawDarkVision || window.lightAuraClipPolygon[auraId]?.light !== undefined) {
 			combineCtx.clearRect(0, 0, canvasWidth, canvasHeight);
