@@ -748,7 +748,8 @@ class Token {
 		
 		//todo verify if this is center or TL
 		//use center of token as snap position?
-		let tokenPosition = snap_point_to_grid(left, top, true, this.tinyToken(), this.options.size, true)
+		let tokenPosition = snap_point_to_grid(left + this.options.size/2, top + this.options.size/2,
+						       true, this.tinyToken(), this.options.size, true)
 		
 		// Stop movement if new position is outside of the scene
 		if (
