@@ -613,13 +613,11 @@ function in_fog_or_dark_image_data(tokenid, imageData) {
 	const centerY = (window.TOKEN_OBJECTS[tokenid].options.top.replace('px', '') / window.CURRENT_SCENE_DATA.scale_factor) + (window.TOKEN_OBJECTS[tokenid].sizeHeight() / 2 / window.CURRENT_SCENE_DATA.scale_factor)
 	let pixeldata = getPixelFromImageData(imageData, centerX, centerY);
 
-	for (let i = 0; i < pixeldata.length; i += 4) {
-		if (pixeldata[i] > 4 || pixeldata[i + 1] > 4 || pixeldata[i + 2] > 4) {
-			return true;
-		}
+	if (pixeldata[1] > 4 || pixeldata[0] > 4 || pixeldata[2] > 4) {
+		return false;
 	}
 
-	return false;
+	return true;
 }
 
 function is_token_in_raycasting_context(tokenid, rayContext=undefined){
@@ -689,21 +687,15 @@ function is_token_under_truesight_aura(tokenid, imageData){
 	let y = parseInt(window.TOKEN_OBJECTS[tokenid].options.top) / window.CURRENT_SCENE_DATA.scale_factor;
 	const right = parseInt(x+(window.TOKEN_OBJECTS[tokenid].sizeWidth() / window.CURRENT_SCENE_DATA.scale_factor));
 	const bottom = parseInt(y+(window.TOKEN_OBJECTS[tokenid].sizeHeight() / window.CURRENT_SCENE_DATA.scale_factor));
-	let pixeldata = []
 	for (; x < right; x++) {
 		for (; y < bottom; y++) {
-			const data = getPixelFromImageData(imageData, x, y)
-			pixeldata = pixeldata.concat(data);
+			const pixeldata = getPixelFromImageData(imageData, x, y)
+			if (pixeldata[0] > 4 || pixeldata[1] > 4 || pixeldata[2] > 4)
+				return true;
 		}
 	}
+	return false;				
 
-	
-	for(let i=0; i<pixeldata.length; i+=4){
-		if(pixeldata[i]>4 || pixeldata[i+1]>4 || pixeldata[i+2]>4)
-			return true;
-	}
-				
-	return  false;
 }
 
 
@@ -746,12 +738,6 @@ function check_single_token_visibility(id){
 
 
 
-	if(window.tokenCheckOffscreenCanvas == undefined){
-		window.tokenCheckOffscreenCanvas = new OffscreenCanvas(fogCanvas.width, fogCanvas.height);
-		window.tokenCheckOffscreenContext = window.tokenCheckOffscreenCanvas.getContext('2d');
-	}
-
-
 	const tokenObjectValues = Object.values(window.TOKEN_OBJECTS);
 	const aPlayerToken = tokenObjectValues.some(d => d.options.id.startsWith('/profile'));
 	const playerTokenWithVisionEnabled = aPlayerToken == true && (window.TOKEN_OBJECTS[playerTokenId]?.options?.auraislight === true || (playerTokenId === undefined && tokenObjectValues.some(d => d.options.id.startsWith('/profile') && d.options.auraislight == true)));
@@ -764,21 +750,19 @@ function check_single_token_visibility(id){
 
 
 
-	const offScreenCanvas = window.tokenCheckOffscreenCanvas;
-	offScreenCanvas.width = fogCanvas.width;
-	offScreenCanvas.height = fogCanvas.height;
-	const offScreenCtx = window.tokenCheckOffscreenContext;
-
+	const offScreenCanvas = window.offScreenCombine;
+	const offScreenCtx = window.offScreenCombineContext;
+	offScreenCtx.globalCompositeOperation = 'source-over';
 	if ((window.DM || playerTokenHasVision) && window.CURRENT_SCENE_DATA.disableSceneVision != 1) {
 		offScreenCtx.clearRect(0, 0, offScreenCanvas.width, offScreenCanvas.height);
 		if(lightCanvas)
 			offScreenCtx.drawImage(lightCanvas, 0, 0);
 	} else if (aPlayerToken == true || window.CURRENT_SCENE_DATA.disableSceneVision == 1) {
-		offScreenCtx.fillStyle = 'rgba(255, 255, 255 , 1)';
+		offScreenCtx.fillStyle = 'rgba(255, 255, 255, 1)';
 		offScreenCtx.fillRect(0, 0, offScreenCanvas.width, offScreenCanvas.height)
 	}
 
-	offScreenCtx.globalCompositeOperation = 'multiply';
+	offScreenCtx.globalCompositeOperation = 'destination-out';
 	offScreenCtx.drawImage(fogCanvas, 0, 0);
 	
 	const offscreenImageData = offScreenCtx.getImageData(0, 0, offScreenCanvas.width, offScreenCanvas.height);
@@ -788,9 +772,8 @@ function check_single_token_visibility(id){
 	const sharedVision = (playerTokenId == id || window.TOKEN_OBJECTS[id].options.share_vision == true || window.TOKEN_OBJECTS[id].options.share_vision == window.myUser || (window.TOKEN_OBJECTS[id].options.share_vision && is_spectator_page()));
 
 	const hideThisTokenInFogOrDarkness = (window.TOKEN_OBJECTS[id].options.revealInFog !== true); //we want to hide this token in fog or darkness
-
-	const inVisibleLight = (sharedVision && (!window.SelectedTokenVision || window.CURRENTLY_SELECTED_TOKENS.length == 0 || isSelected)) || in_fog_or_dark_image_data(id, offscreenImageData) === true; // this token is not in fog or darkness and not the players token
-
+	
+	const inVisibleLight = (sharedVision && (!window.SelectedTokenVision || window.CURRENTLY_SELECTED_TOKENS.length == 0 || isSelected)) || in_fog_or_dark_image_data(id, offscreenImageData) === false; // this token is not in fog or darkness and not the players token
 	const dmSelected = window.DM === true && isSelected;
 
 	const showThisPlayerToken = window.TOKEN_OBJECTS[id].options.itemType === 'pc' && window.DM !== true && playerTokenId === undefined //show this token when logged in as a player without your own token
@@ -891,18 +874,10 @@ function do_check_token_visibility() {
 		playerTokenHasVision = true
 	else
 		playerTokenHasVision = false;
-	
 
-
-	
-	if (window.tokenCheckOffscreenCanvas == undefined) {
-		window.tokenCheckOffscreenCanvas = new OffscreenCanvas(fogCanvas.width, fogCanvas.height);
-		window.tokenCheckOffscreenContext = window.tokenCheckOffscreenCanvas.getContext('2d');
-	}
-	const offScreenCanvas = window.tokenCheckOffscreenCanvas;
-	offScreenCanvas.width = fogCanvas.width;
-	offScreenCanvas.height = fogCanvas.height;
-	const offScreenCtx = window.tokenCheckOffscreenContext;
+	const offScreenCanvas = window.offScreenCombine;
+	const offScreenCtx = window.offScreenCombineContext;
+	offScreenCtx.globalCompositeOperation = 'source-over';
 	if ((window.DM || playerTokenHasVision) && window.CURRENT_SCENE_DATA.disableSceneVision != 1){
 		offScreenCtx.clearRect(0, 0, offScreenCanvas.width, offScreenCanvas.height);
 		offScreenCtx.drawImage(lightCanvas, 0, 0);	
@@ -921,15 +896,10 @@ function do_check_token_visibility() {
 		truesightData = truesightContext.getImageData(0, 0, window.truesightCanvas.width, window.truesightCanvas.height);
 	}
 
-
-	offScreenCtx.globalCompositeOperation = 'multiply';
+	offScreenCtx.globalCompositeOperation = 'destination-out';
 	offScreenCtx.drawImage(fogCanvas, 0, 0);
 
-	
-
-
 	const offscreenImageData = offScreenCtx.getImageData(0, 0, offScreenCanvas.width, offScreenCanvas.height);
-
 
 	for (let id in window.TOKEN_OBJECTS) {
 		if(window.TOKEN_OBJECTS[id].options.combatGroupToken || window.TOKEN_OBJECTS[id].options.type != undefined)
@@ -945,7 +915,7 @@ function do_check_token_visibility() {
 
 		const hideThisTokenInFogOrDarkness = (window.TOKEN_OBJECTS[id].options.revealInFog !== true); //we want to hide this token in fog or darkness
 		
-		const inVisibleLight = (sharedVision && (!window.SelectedTokenVision || window.CURRENTLY_SELECTED_TOKENS.length == 0 || isSelected)) || in_fog_or_dark_image_data(id, offscreenImageData) === true; // this token is not in fog or darkness and not the players token
+		const inVisibleLight = (sharedVision && (!window.SelectedTokenVision || window.CURRENTLY_SELECTED_TOKENS.length == 0 || isSelected)) || in_fog_or_dark_image_data(id, offscreenImageData) === false; // this token is not in fog or darkness and not the players token
 
 		const dmSelected = window.DM === true && isSelected;
 
@@ -993,10 +963,6 @@ function do_check_token_visibility() {
 
 	showDoors.toggleClass('notVisible', false);
 	hideDoors.toggleClass('notVisible', true);
-	
-
-
-	console.log("finished");
 }
 
 function circle2(a, b) {
@@ -1125,37 +1091,37 @@ function redraw_alphanum_grid(){
 		}
 
 	} else if (window.CURRENT_SCENE_DATA.gridType == 2 || window.CURRENT_SCENE_DATA.gridType == 3){
-		const [hpps_g, vpps_g] = grid_size(false, false); //grid units
-		horizontalSvg.attr('height', vpps_g);
-		verticalSvg.attr('width', hpps_g);
-		horizontalSvg.attr('viewBox', `0 0 ${width * scale_factor} ${vpps_g}`);
-		verticalSvg.attr('viewBox', `0 0 ${hpps_g} ${height * scale_factor}`);
+		const [hpps, vpps] = grid_size(false, false); //grid units
+		horizontalSvg.attr('height', vpps);
+		verticalSvg.attr('width', hpps);
+		horizontalSvg.attr('viewBox', `0 0 ${width * scale_factor} ${vpps}`);
+		verticalSvg.attr('viewBox', `0 0 ${hpps} ${height * scale_factor}`);
 		/* Enable if we want half ticks for offset
 		if (window.CURRENT_SCENE_DATA.gridType == 2){
-			hpps_g = hpps_g / 2;
+			hpps = hpps / 2;
 		}
 		else if(window.CURRENT_SCENE_DATA.gridType == 3){
-			vpps_g = vpps_g / 2;
+			vpps = vpps / 2;
 		}
 		*/
 		horizontalSvg.css({
-			'--stroke-width': `${hpps_g / 10}`,
-			'--font-size': `${hpps_g / 2}px`
+			'--stroke-width': `${hpps / 10}`,
+			'--font-size': `${hpps / 2}px`
 		})
 		verticalSvg.css({
-			'--stroke-width': `${vpps_g / 10}`,
-			'--font-size': `${vpps_g / 2}px`
+			'--stroke-width': `${vpps / 10}`,
+			'--font-size': `${vpps / 2}px`
 		})
-		const numGridWide = Math.ceil((width + offsetx) * scale_factor / hpps_g);
-		const numGridHigh = Math.ceil((height + offsety) * scale_factor / vpps_g);
+		const numGridWide = Math.ceil((width + offsetx) * scale_factor / hpps);
+		const numGridHigh = Math.ceil((height + offsety) * scale_factor / vpps);
 	
 		
 		for (let i = 1; i < numGridWide; i++) {
-			const textLine = `<text x='${(i * hpps_g) + (offsetx % hpps_g) }' y='50%'><tspan>${getAlphaLabel(i)}</tspan></text>`;
+			const textLine = `<text x='${(i * hpps) + (offsetx % hpps) }' y='50%'><tspan>${getAlphaLabel(i)}</tspan></text>`;
 			horizontalSvg[0].innerHTML += textLine;
 		}
 		for (let i = 1; i < numGridHigh; i++) {
-			const textLine = `<text x='50%' y='${(i * vpps_g) + (offsety % vpps_g) }'><tspan>${i}</tspan></text>`;
+			const textLine = `<text x='50%' y='${(i * vpps) + (offsety % vpps) }'><tspan>${i}</tspan></text>`;
 			verticalSvg[0].innerHTML += textLine;
 		}
 	}
@@ -1297,12 +1263,21 @@ function draw_svg_grid(type=null, hpps=null, vpps=null, offsetX=null, offsetY=nu
 		'background-image': "url("+gr+")",
 		'background-size': `${xs * tilex}px ${ys * tiley}px`,
 		'background-position-x': Math.round(startX), //todo? Round or not?
-		'background-position-y': Math.round(startY),
-		'visibility': 'visible'
+		'background-position-y': Math.round(startY)
 	}
-	//grid renders into 2 elements (below darkness and above)
 	grc2.css(bk);
 	grc.css(bk);
+	grid_overlay_update(sd.grid, sd.gridOver);
+}
+
+function grid_overlay_update(grid, gridOver) {
+	//grid renders into 2 elements (below darkness&fog and above)
+	// .grid - global visibility control
+	// .gridOver - grid overlay control:
+	//    0=never 1=always 2=drag guide (when dragging) 3=only show drag guide (but not under grid)
+	$('#grid_svg_overlay').css('visibility', (grid != 0 && gridOver != 0) ? 'visible' : 'hidden');
+	$("#VTT").css('--grid-overlay-on', gridOver == 1 ? '1' : '0');
+	$('#grid_svg_underlay').css('visibility', (grid != '0' && gridOver != 3) ? 'visible' : 'hidden');
 }
 
 //returns current [width,height] of grid (including hex)
@@ -1318,14 +1293,22 @@ function grid_size(scaled = false, adjusted = false) {
 }
 
 function redraw_grid(hpps=null, vpps=null, offsetX=null, offsetY=null, color=null, lineWidth=null, subdivide=null, dash=[]){
+	hide_wizarding_box();
 	clear_grid();
+	$("#VTT").css('--grid-overlay-on', !!window.CURRENT_SCENE_DATA.grid_above_dark);
 	draw_svg_grid(null, hpps, vpps, offsetX, offsetY, color, lineWidth, subdivide, dash);	
 }
 
-//See Main.js for styling of wiz box
+function hide_wizarding_box() {
+	const grid = document.getElementById('wizbox-grid');
+	const hex = document.getElementById('wizbox-hex');	
+	if(grid) grid.setAttribute('visibility', 'hidden');
+	if(hex) hex.setAttribute('visibility', 'hidden');
+}
 function draw_wizarding_box() {
 	const sd = window.CURRENT_SCENE_DATA;
 	const svg = document.getElementById("wizbox");
+	if(!svg) return;
 	let al1 = {
 		x: (parseInt($("#aligner1").css("left")) + 29)/sd.scale_factor,
 		y: (parseInt($("#aligner1").css("top")) + 29)/sd.scale_factor,
@@ -1338,20 +1321,20 @@ function draw_wizarding_box() {
 	const grid = document.getElementById('wizbox-grid');
 	const hex = document.getElementById('wizbox-hex');	
 	if($('#gridType input:checked').val() == 1){
-		grid.setAttribute('visibility', 'visible');
 		hex.setAttribute('visibility', 'hidden');
 		const width = al2.x - al1.x;
 		const height = al2.y - al1.y;
 		grid.setAttribute('transform', `translate(${al1.x}, ${al1.y}) scale(${width}, ${height})`);
+		grid.setAttribute('visibility', 'visible');
 	} else {
 		const hexedge = Math.abs(al2.y - al1.y) / 3;
 		const rotate = $('#gridType input:checked').val() == 3 ? 90 : 0;
 		const adjx = sd.scaleAdjustment?.x || 1.0;
 		const adjy = sd.scaleAdjustment?.y || 1.0;
 		//todo deal with translate for adjx/adjy
-		hex.setAttribute('visibility', 'visible');
 		grid.setAttribute('visibility', 'hidden');
-		hex.setAttribute('transform', `translate(${al1.x * adjx}, ${al1.y * adjy}) scale(${hexedge*adjx}, ${hexedge*adjy}) rotate(${rotate})`);		
+		hex.setAttribute('transform', `translate(${al1.x * adjx}, ${al1.y * adjy}) scale(${hexedge*adjx}, ${hexedge*adjy}) rotate(${rotate})`);
+		hex.setAttribute('visibility', 'visible');
 	}
 }
 
@@ -1420,19 +1403,7 @@ function reset_canvas(apply_zoom=true) {
 	window.temp_context = window.temp_canvas.getContext("2d");
 	if (window.CURRENT_SCENE_DATA && window.CURRENT_SCENE_DATA.hpps > 10 && window.CURRENT_SCENE_DATA.vpps > 10) {
 		//alert(window.CURRENT_SCENE_DATA.hpps + " "+ window.CURRENT_SCENE_DATA.vpps);
-		const vtt = $("#VTT");
-		if(window.WIZARDING){
-			vtt.css("--scene-scale", 1);
-		}
-		else{
-			vtt.css("--scene-scale", window.CURRENT_SCENE_DATA.scale_factor);
-			vtt.css("--grid-size-x", window.CURRENT_SCENE_DATA.hpps);
-			vtt.css("--grid-size-y", window.CURRENT_SCENE_DATA.vpps);
-			vtt.css("--grid-offset-x", window.CURRENT_SCENE_DATA.offsetx);
-			vtt.css("--grid-offset-y", window.CURRENT_SCENE_DATA.offsety);
-			vtt.css("--grid-thickness", window.CURRENT_SCENE_DATA.grid_line_width);
-			vtt.css("--grid-color", window.CURRENT_SCENE_DATA.grid_color);
-		}
+		$("#VTT").css("--scene-scale", window.WIZARDING ? 1 : window.CURRENT_SCENE_DATA.scale_factor);
 
 		startX = Math.round(window.CURRENT_SCENE_DATA.offsetx);
 		startY = Math.round(window.CURRENT_SCENE_DATA.offsety);
@@ -1440,10 +1411,7 @@ function reset_canvas(apply_zoom=true) {
 		//alert(startX+ " "+startY);
 		if (window.WIZARDING) {
 			draw_wizarding_box();
-		}
-		//alert('inizio 1');
-
-		if (!window.WIZARDING) {
+		} else {
 			redraw_grid();
 			redraw_alphanum_grid();
 		}
@@ -1479,31 +1447,38 @@ function check_darkness_value(){
 	}	
 
 
-
+	const rayCanvas = $('#raycastingCanvas');
+	const lightContainer = $('#light_container');
+	const exploredCanvas = $('#exploredCanvas');
+	const fogCanvas = $('#fog_overlay')
+	const outerLightContainer = $('#outer_light_container')
 	if(selectedTokens.length>0){
-		
+
 		if ((window.SelectedTokenVision === true && tokenHasSharedVision && window.CURRENT_SCENE_DATA.disableSceneVision != 1)){
 			if(window.CURRENT_SCENE_DATA.darkness_filter > 0){
 				$('#VTT').css('--darkness-filter', `${100 - window.CURRENT_SCENE_DATA.darkness_filter}%`)
 			}
-	  		$('#raycastingCanvas').css('opacity', '1');
+	  		rayCanvas.css('opacity', '1');
 	  		
-		 	$('#light_container').css({
+		 	lightContainer.css({
 	 			'opacity': '1'
 	 		});
 
-		 	$('#exploredCanvas').css('opacity', '0');
+		 	exploredCanvas.css('opacity', '0');
+			if(window.DM){
+				fogCanvas.css('opacity', '1');
+			}
 	  	}
 	  	else {
   		 	if(window.DM && darknessPercent < 40){
   		 		darknessPercent = 40;
-  		 		$('#raycastingCanvas').css('opacity', '0');
+  		 		rayCanvas.css('opacity', '0');
   		 	}
 			else if (window.DM || window.CURRENT_SCENE_DATA.disableSceneVision != 1){
-  		 		$('#raycastingCanvas').css('opacity', '');
+  		 		rayCanvas.css('opacity', '');
   		 	}
 			else if (window.CURRENT_SCENE_DATA.disableSceneVision == 1) {
-				$('#raycastingCanvas').css('opacity', '0');
+				rayCanvas.css('opacity', '0');
 			}
   			$('#VTT').css('--darkness-filter', darknessPercent + "%");
   		   	if(window.DM){
@@ -1513,39 +1488,38 @@ function check_darkness_value(){
   				$(`.aura-element`).show();
   		   	}
 	  		if(!parseInt(window.CURRENT_SCENE_DATA.darkness_filter) && window.walls?.length>4){
-			 	$('#light_container').css({
-		 			'opacity': '0.3'
-			 	});
+			 	lightContainer.css({'opacity': '0.3'});
 		  	}
 		  	else{
-		  		$('#light_container').css({
-		 			'opacity': ''
-		 		});
+		  		lightContainer.css({'opacity': ''});
   			}
-  			$('#exploredCanvas').css('opacity', '');
+  			exploredCanvas.css('opacity', '');
+			if (window.DM) {
+				fogCanvas.css('opacity', '0.5');
+			}
   		}	
 	}
 	else {
 		if((window.DM && darknessPercent < 40)){
 			darknessPercent = 40;
-			$('#raycastingCanvas').css('opacity', '0');
+			rayCanvas.css('opacity', '0');
 		}
 		else if (window.DM || window.CURRENT_SCENE_DATA.disableSceneVision != 1){
-			$('#raycastingCanvas').css('opacity', '');
+			rayCanvas.css('opacity', '');
 		}
 		else if (window.CURRENT_SCENE_DATA.disableSceneVision == 1){
-			$('#raycastingCanvas').css('opacity', '0');
+			rayCanvas.css('opacity', '0');
 		}
 		
 
 		if(!parseInt(darknessfilter) && window.walls?.length>4){
-			$('#outer_light_container').css({
+			outerLightContainer.css({
 				'mix-blend-mode': 'unset',
 				'background':  '#FFF',
 				'opacity': '0.3'
 			});
 		} else{
-			$('#outer_light_container').css({
+			outerLightContainer.css({
 				'mix-blend-mode': '',
 				'background': '',
 				'opacity': ''
@@ -1553,17 +1527,15 @@ function check_darkness_value(){
 		}
 		$('#VTT').css('--darkness-filter', darknessPercent + "%");
 		if(!parseInt(window.CURRENT_SCENE_DATA.darkness_filter) && window.walls?.length>4){
-			$('#light_container').css({
-				'opacity': '0.3'
-			});
+			lightContainer.css({'opacity': '0.3'});
 		}
 		else{
-			$('#light_container').css({
-				'opacity': ''
-			});
+			lightContainer.css({'opacity': ''});
 		}
-		$('#exploredCanvas').css('opacity', '');
-		
+		exploredCanvas.css('opacity', '');
+		if (window.DM) {
+			fogCanvas.css('opacity', '0.5');
+		}
 		
   	}
 }
@@ -1573,11 +1545,7 @@ function redraw_fog() {
 		return;
 	let canvas = document.getElementById("fog_overlay");
 	let fogContext = canvas.getContext("2d");
-	let fogStyle;
-	if (window.DM)
-		fogStyle = "rgba(0, 0, 0, 0.5)";
-	else
-		fogStyle = "rgb(0, 0, 0)";
+	let fogStyle = "rgb(0, 0, 0)";
 
 
 	let offscreenDraw = new OffscreenCanvas(canvas.width, canvas.height); 
@@ -2109,12 +2077,12 @@ function setVisionLightOffscreenCanvas(){
 		}
 	}
 
-	create_or_set_offscreen_canvas('offScreenCombine');
-	create_or_set_offscreen_canvas('lightInLos');
-	create_or_set_offscreen_canvas('offscreenCanvasMask');
-	create_or_set_offscreen_canvas('moveOffscreenCanvasMask', true, true);
-	create_or_set_offscreen_canvas('devilsightCanvas');
-	create_or_set_offscreen_canvas('truesightCanvas');
+	create_or_set_offscreen_canvas('offScreenCombine'); // general purpose offscreen canvas used for repetative short term things like combining vision circles, line of sight, fog, applying blurs etc. Each usage is contained and clears or fills a rect the size of the canvas
+	create_or_set_offscreen_canvas('lightInLos'); // used to store token and drawn light thats in line of sight, checked against to reveal/hide tokens
+	create_or_set_offscreen_canvas('offscreenCanvasMask'); // used to combine line of sights and drawn to raycastingCanvas after
+	create_or_set_offscreen_canvas('moveOffscreenCanvasMask', true, true); // used to store moveable area that's checked against while moving tokens
+	create_or_set_offscreen_canvas('devilsightCanvas'); //devilsight canvas is used to combine with darkness aoe (or other magical darkness sources if implemented)
+	create_or_set_offscreen_canvas('truesightCanvas'); //this is stored and checked against in vision checks for invisible creatures (also works like devilsight for magical darkness)
 }
 function redraw_light_walls(clear=true, editingWallPoints = false){
 	let showWallsToggle = $('#show_walls').hasClass('button-enabled');
@@ -3095,7 +3063,7 @@ function drawing_mousedown(e) {
 		const hpps = window.CURRENT_SCENE_DATA.gridType == 2 ? window.CURRENT_SCENE_DATA.vpps : window.CURRENT_SCENE_DATA.hpps;
 
 		clear_temp_canvas()
-		let { x, y } = snap_point_to_grid(window.BEGIN_MOUSEX, window.BEGIN_MOUSEY, true, undefined, undefined, undefined, true);
+		let { x, y } = snap_point_to_grid(window.BEGIN_MOUSEX, window.BEGIN_MOUSEY, true);
 		window.BRUSHPOINTS.push([Math.round(x), Math.round(y)])
 		window.BRUSHPOINTS = Array.from(new Set(window.BRUSHPOINTS.map(JSON.stringify)), JSON.parse)		
 		if(window.CURRENT_SCENE_DATA.gridType == '1'){
@@ -3495,7 +3463,7 @@ function drawing_mousemove(e) {
 			
 			window.temp_context.fillStyle = window.DRAWCOLOR;
 			clear_temp_canvas()
-			let { x, y } = snap_point_to_grid(mouseX, mouseY, true, undefined, undefined, undefined, true);
+			let { x, y } = snap_point_to_grid(mouseX, mouseY, true);
 			window.BRUSHPOINTS.push([Math.round(x), Math.round(y)])
 			window.BRUSHPOINTS = Array.from(new Set(window.BRUSHPOINTS.map(JSON.stringify)), JSON.parse)
 			

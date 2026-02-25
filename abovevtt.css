@@ -85,9 +85,11 @@ div#hide_interface_button [data-name]:after {
     right: 40px;
     top: 15px;
 }
-canvas.dice-rolling-panel__container{
+canvas.dice-rolling-panel__container,
+#character-tools-target>canvas{
     max-width: calc(100% - var(--sidebar-width, 340px)) !important;
     z-index: 160000 !important;
+    visibility: visible;
 }
 .hide-button.active{
     color: #fff;
@@ -942,11 +944,13 @@ select#doorTypeSelectUVTT{
     background-image: none;
     border: none;
 }
-
+#fog_overlay {
+    opacity: 0.5;
+}
 .body-rpgcharacter-sheet #fog_overlay,
 .avtt-spectator-sheet #fog_overlay {
     filter: drop-shadow(0px 0px 2px #000) blur(1px); /*fill in fog gaps on player view*/
-  
+    opacity: 1;
 }
 #groupRotationGrabber,
 #rotationGrabber {
@@ -957,6 +961,7 @@ select#doorTypeSelectUVTT{
 #draw_overlay{
   pointer-events:none;
 }
+
 #elev_overlay{
     opacity: 0.5;
 }
@@ -11118,10 +11123,14 @@ float: right;
     display: flex;
 }
 
-.dice-rolling-panel .dice-toolbar{
+.dice-rolling-panel .dice-toolbar,
+.dice-rolling-panel [class*='DiceContainer_button']{
     bottom: 35px !important;
 }
-
+[data-floating-ui-portal].hidden,
+.roll-mod-container.hidden{
+    visibility:hidden;
+}
 @keyframes bubble {
      0%{
         --opacity: 0;
@@ -14529,7 +14538,6 @@ button#displayedDiceFormulaExit:hover {
   height: 100%;  
   background-repeat: repeat;
 }
-
 #VTT.hide-players *{
     visibility:hidden !important;
     pointer-events:none !important;

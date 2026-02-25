@@ -285,6 +285,28 @@ class Token {
 		this.update_opacity(tok, false);
 		debounceLightChecks();
 	}
+	moveToTop(){
+		const selfId = this.options.id;
+		$(".token").each(function () {
+			let tokenId = $(this).attr('data-id');
+			let tokenzindexdiff = window.TOKEN_OBJECTS[tokenId].options.zindexdiff;
+			if (tokenzindexdiff >= window.TOKEN_OBJECTS[selfId].options.zindexdiff && tokenId != selfId) {
+				window.TOKEN_OBJECTS[selfId].options.zindexdiff = tokenzindexdiff + 1;
+			}
+		});
+		this.place_sync_persist();
+	}
+	moveToBottom() {
+		const selfId = this.options.id;
+		$(".token").each(function () {
+			let tokenId = $(this).attr('data-id');
+			let tokenzindexdiff = window.TOKEN_OBJECTS[tokenId].options.zindexdiff;
+			if (tokenzindexdiff <= window.TOKEN_OBJECTS[selfId].options.zindexdiff && tokenId != selfId) {
+				window.TOKEN_OBJECTS[selfId].options.zindexdiff = Math.max(tokenzindexdiff - 1, -5000);
+			}	
+		});
+		this.place_sync_persist();
+	}
 
 	isLineAoe() {
 		// 1 being a single square which is usually 5ft
@@ -675,13 +697,6 @@ class Token {
 		tokenElement.find(".token-image").css("transform", imageTransform);
 		$(`.aura-element-container-clip[id='${this.options.id}'] .aura-element, .aura-element[data-id='${this.options.id}']`).css('--rotation', newRotation + "deg");
 	}
-	flip(newFlip) { //cycles through by default
-		if (this.isPlayerLocked()) return; // don't allow rotating if the token is locked
-		if (this.isDMLocked()) return; // don't allow rotating if the token is locked		
-		if(newFlip == undefined) newFlip = ((this.options.tokenFlip || 0) + 1) % 2;
-		this.options.tokenFlip = newFlip;
-		this.rotate(this.options.rotation); //re-use side effects of rotation code
-	}
 	moveUp()        { this.moveDirection(-1,  0); }
 	moveDown()      { this.moveDirection( 1,  0); }
 	moveLeft()      { this.moveDirection( 0, -1); }
@@ -707,6 +722,13 @@ class Token {
 		tmpy += dy * (grsize[1] / ((this.tinyToken() && gridType == 1) ? 2 : 1));
 		this.move(tmpy, tmpx)
 	}
+	flip(newFlip) { //cycles through by default
+		if (this.isPlayerLocked()) return; // don't allow rotating if the token is locked
+		if (this.isDMLocked()) return; // don't allow rotating if the token is locked		
+		if(newFlip == undefined) newFlip = ((this.options.tokenFlip || 0) + 1) % 2;
+		this.options.tokenFlip = newFlip;
+		this.rotate(this.options.rotation); //re-use side effects of rotation code
+	}
 
 	/**
 	 * Move token to new position.
@@ -724,13 +746,8 @@ class Token {
 		
 		this.prepareWalkableArea()
 		
-		//todo verify if this is center or TL
-		//use center of token as snap position
 		let tokenPosition = snap_point_to_grid(left + this.options.size/2, top + this.options.size/2,
-						       true, this.tinyToken(), this.options.size, true)
-		
-		
-
+						       true, this.tinyToken(), this.options.size);
 		// Stop movement if new position is outside of the scene
 		if (
 			top  < this.walkableArea.top - this.options.size    || 
@@ -739,10 +756,7 @@ class Token {
 			left > this.walkableArea.right + this.options.size 
 		) { return; }
 		let halfWidth = parseFloat(this.options.size)/2;
-		
-		
 		let inLos = this.isAoe() || window.DM ? true : detectInLos(tokenPosition.x + halfWidth, tokenPosition.y + halfWidth); ;
-		
 		
 		const self = this;
 
@@ -757,16 +771,19 @@ class Token {
 				remove_selected_token_bounding_box();
 
 			old.animate({left: this.options.left,top: this.options.top,}, { duration: 0, queue: true, 
-				complete: async function() {
+				complete: async function() {		 
 					const darknessMoved = (self.options.darkness || self.options.tokenWall) ? true : false;
 					if (darknessMoved)
 						redraw_drawn_light(darknessMoved);
-					
-					if(window.EXPERIMENTAL_SETTINGS.dragLight == true)
+
+					if (window.EXPERIMENTAL_SETTINGS.dragLight == true)
 						throttleLight(darknessMoved);
 					else
 						longDebounceLightChecks(darknessMoved)
+					if (window.CURRENT_SCENE_DATA.disableSceneVision == 1 && !window.DM) {
+						check_single_token_visibility(self.options.id);
 					}
+				}
 			});
 			if(!this.options.id.includes('exampleToken') && !this.options.combatGroupToken){
 				setTokenAuras(old, this.options);
@@ -3018,14 +3035,17 @@ class Token {
 				let dragStopTimer;
 				tok.draggable({
 					stop: function (event) {
-							event.stopPropagation();						
+						        event.stopPropagation();
+						        $("#VTT").css('--grid-overlay-on-tmp', '0');						
 							window.DRAGGING = false;
 							window.enable_window_mouse_handlers();
 		
 							if(window.TOKEN_OBJECTS[self.options.id] != undefined){
 								self.sync($.extend(true, {}, self.options));
 							}
-							
+							if (window.CURRENT_SCENE_DATA.disableSceneVision == 1 && !window.DM)
+								check_single_token_visibility(self.options.id);
+
 							let darknessMoved = (self.options.darkness || self.options.tokenWall) ? true : false;
 							if (self.selected ) {
 								for (let tok of window.dragSelectedTokens){
@@ -3035,10 +3055,11 @@ class Token {
 									let curr = window.TOKEN_OBJECTS[id];
 									if (curr != undefined){
 										curr.sync($.extend(true, {}, curr.options));
-									}
-									
-									if(curr?.options?.darkness === true)
-										darknessMoved = true;
+										if (curr.options?.darkness === true)
+											darknessMoved = true;
+										if (window.CURRENT_SCENE_DATA.disableSceneVision == 1 && !window.DM)
+											check_single_token_visibility(curr.options?.id);
+									}									
 								}												
 							}
 							if(darknessMoved){
@@ -3078,6 +3099,7 @@ class Token {
 						},
 					start: function (event) {
 						event.stopPropagation();
+						$("#VTT").css('--grid-overlay-on-tmp', '1');
 						window.disable_window_mouse_handlers();
 						pauseCursorEventListener = true; // we're going to send events from drag, so we don't need the eventListener sending events, too
 						if (get_avtt_setting_value("allowTokenMeasurement")) {
@@ -3264,10 +3286,13 @@ class Token {
 						let tokenY = (ui.position.top - ((zoom-parseFloat(window.orig_zoom)) * parseFloat(self.sizeHeight())/2)) / zoom;
 						let tinyToken = (Math.round(parseFloat(window.TOKEN_OBJECTS[this.dataset.id].options.gridSquares)*2)/2 < 1) || window.TOKEN_OBJECTS[this.dataset.id].isAoe();
 
-						if (should_snap_to_grid() && (window.CURRENT_SCENE_DATA.gridType == '2' || window.CURRENT_SCENE_DATA.gridType == '3')) {
-							//TODO: WHY?
-							tokenX +=  parseFloat(window.CURRENT_SCENE_DATA.hpps) / (tinyToken ? 4 : 2);
-							tokenY +=  parseFloat(window.CURRENT_SCENE_DATA.vpps) /  (tinyToken ? 4 : 2);
+						if (should_snap_to_grid()) { // && (window.CURRENT_SCENE_DATA.gridType == '2' || window.CURRENT_SCENE_DATA.gridType == '3')) {
+							//we really want the exact mouse position -
+							//someone fix this if there is a better way with this draggable impl
+							const sd = window.CURRENT_SCENE_DATA;
+							const rect = document.querySelector('#scene_map_container').getBoundingClientRect();
+							tokenX = (event.clientX - rect.left) * $("#scene_map").width() * sd.scale_factor / rect.width;
+							tokenY = (event.clientY - rect.top) * $("#scene_map").height() * sd.scale_factor / rect.height
 						}
 						//snap to where mouse is
 						let tokenPosition = snap_point_to_grid(tokenX, tokenY, undefined, tinyToken, self.options.size);
@@ -3806,12 +3831,10 @@ function should_snap_to_grid() {
 }
 
 //arrowKeys: special function
-// assumes mapX/Y is current and should just re-align (TODO:)
 // tinytoken - only matters for hex and arrowmode
 // tokenWidth only matters for hex grid
 // rounddown only matters for square ( floor instead of round)
-function snap_point_to_grid(mapX, mapY, forceSnap = false, tinyToken = false, tokenWidth = 0,
-			    arrowKeys=false, roundDown=false) {
+function snap_point_to_grid(mapX, mapY, forceSnap = false, tinyToken = false, tokenWidth = 0) {
 	const sd = window.CURRENT_SCENE_DATA;
 	//todo implement tinytoken
 	if (forceSnap || should_snap_to_grid()) {
@@ -3830,12 +3853,13 @@ function snap_point_to_grid(mapX, mapY, forceSnap = false, tinyToken = false, to
 		if(tinyToken) {
 			gridWidth /= 2; gridHeight /= 2;
 		}
-		const func = (roundDown ? Math.round : Math.floor);
-		const currentGridX = func((mapX - offsetx) / gridWidth);
-		const currentGridY = func((mapY - offsety) / gridHeight);
+		const currentGridX = (mapX - offsetx) / gridWidth;
+		const currentGridY = (mapY - offsety) / gridHeight;
+		console.log("mapX", mapX, mapY, offsetx, offsety, gridWidth, gridHeight, currentGridX, currentGridY);
 		return {
-			x: Math.ceil((currentGridX * gridWidth) + offsetx),
-			y: Math.ceil((currentGridY * gridHeight) + offsety)
+			//todo not sure what ceil is for here
+			x: Math.floor(currentGridX) * gridWidth + offsetx,
+			y: Math.floor(currentGridY) * gridHeight + offsety
 		}
 	} else {
 		return { x: mapX, y: mapY };
