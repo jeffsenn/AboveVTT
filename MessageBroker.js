@@ -1167,8 +1167,9 @@ class MessageBroker {
 			} else
 
 			if(msg.eventType=="custom/myVTT/Popup"){
-				console.log("POPUP", msg.data);
-				if(!window.DM || (msg.data.from && msg.data.from != window.PLAYER_ID)){
+				if(!window.DM &&
+				   !(msg.data.from && msg.data.from != window.PLAYER_ID) &&
+				   !(msg.data.to && msg.data.to != "everyone" && msg.data.to != window.PLAYER_ID)) {
 					if(msg.data.delete == true){
 						$.magnificPopup.close();
 					} else {
