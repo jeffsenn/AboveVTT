@@ -29,6 +29,13 @@ $(function() {
   }
 });
 
+class noLogError extends Error{
+  constructor(message, options) {
+    super(message, options); 
+    this.name = "noLogError";
+  }
+}
+
 const async_sleep = m => new Promise(r => setTimeout(r, m));
 
 const charactersPageRegex = /\/characters\/\d+/;
@@ -54,6 +61,7 @@ function getAltKeyName() {
 function getShiftKeyName() {
   return isMac() ? "&#8679;" : "SHIFT";
 }
+
 
 
 function mydebounce(func, timeout = 800){  
@@ -792,10 +800,6 @@ function create_update_token(options, save = true) {
 
   if (!(id in window.TOKEN_OBJECTS)) {
     window.TOKEN_OBJECTS[id] = new Token(options);
-
-    window.TOKEN_OBJECTS[id].sync = mydebounce(function(options) {
-      window.MB.sendMessage('custom/myVTT/token', options);
-    }, 300);
   }
 
   if(options.repositionAoe != undefined){
@@ -1438,15 +1442,15 @@ function dropBoxOptions(callback, multiselect = false, fileType=['images', 'vide
 function showErrorMessage(error, ...extraInfo) {
   removeError();
   window.logSnapshot = process_monitored_logs(false);
-
-  console.log("showErrorMessage", ...extraInfo, error.stack);
   if (!(error instanceof Error)) {
     if (typeof error === "object") {
       error = JSON.stringify(error);
     } 
     error = new Error(error?.toString());
   }
+
   const stack = error.stack || new Error().stack;
+  console.error(error, ...extraInfo);
   if(stack.includes('Internal Server Error') && stack.includes('AboveApi.getScene')){
     if(!window.DM){
       extraInfo.push('<br/><b>The last scene players were on may have been deleted by the DM. Ask the DM to click the player button beside an existing scene. Even if one is already highlighted click it again to update the server info.</b>')
@@ -1553,12 +1557,16 @@ function showGoogleDriveWarning(){
  * @param {Error} error an error object to be parsed and displayed
  * @param {string|*[]} extraInfo other relevant information */
 function showError(error, ...extraInfo) {
+  if(error instanceof noLogError) 
+    return;
+  
   if (!(error instanceof Error)) {
     if (typeof error === "object") {
       error = JSON.stringify(error);
     } 
     error = new Error(error?.toString());
   }
+
   $('#loadingStyles').remove(); 
   showErrorMessage(error, ...extraInfo);
 
@@ -1800,7 +1808,15 @@ function my_player_id() {
     return `${window.PLAYER_ID}`;
   }
 }
+function removeUnusedPlayerData(object, isToken = true){
+    const unusedPlayerData = isToken 
+      ? ['image', 'attacks', 'attunedItems', 'campaign', 'campaignSetting', 'castingInfo', 'classes', 'deathSaveInfo', 'decorations', 'extras', 'immunities', 'level', 'passiveInsight', 'passiveInvestigation', 'passivePerception', 'proficiencyBonus', 'proficiencyGroups', 'race', 'readOnlyUrl', 'resistances', 'senses', 'skills', 'speeds', 'vulnerabilities'] 
+      : ['attacks', 'attunedItems', 'campaign', 'campaignSetting', 'classes'];
 
+    for (let i = 0; i < unusedPlayerData.length; i++) {
+      delete object[unusedPlayerData[i]];
+    }
+}
 /** @param {string} idOrSheet the playerId or pc.sheet of the pc you're looking for
  * @param {boolean} useDefault whether to return a generic default object if the pc object is not found
  * @return {object} The window.pcs object that matches the idOrSheet */
@@ -1817,10 +1833,7 @@ function find_pc_by_player_id(idOrSheet, useDefault = true) {
   const regex = new RegExp(regexStr, 'gi');
   const pc = window.pcs.find(pc => pc.sheet.match(regex) || pc.sheet == idOrSheet);
   if (pc) {
-    const unusedPlayerData = ['attacks', 'attunedItems', 'campaign', 'campaignSetting', 'classes'];
-    for (let i = 0; i < unusedPlayerData.length; i++) {
-      delete pc[unusedPlayerData[i]];
-    }
+    removeUnusedPlayerData(pc, false);
     return pc;
   }
   if (useDefault) {
@@ -1880,8 +1893,7 @@ function update_pc_with_data(playerId, data) {
 
 
 const debounce_pc_token_update = mydebounce(() => {  
-  const unusedPlayerData = ['image', 'attacks', 'attunedItems', 'campaign', 'campaignSetting', 'castingInfo', 'classes', 'deathSaveInfo', 'decorations', 'extras', 'immunities', 'level', 'passiveInsight', 'passiveInvestigation', 'passivePerception', 'proficiencyBonus', 'proficiencyGroups', 'race', 'readOnlyUrl', 'resistances', 'senses', 'skills', 'speeds', 'vulnerabilities'];
-      
+  
   window.PC_TOKENS_NEEDING_UPDATES.forEach((playerId) => {
     const pc = find_pc_by_player_id(playerId, false);
     let token = window.TOKEN_OBJECTS[pc?.sheet];     
@@ -1892,9 +1904,7 @@ const debounce_pc_token_update = mydebounce(() => {
       const newImage = (token.options.alternativeImages == undefined || token.options.alternativeImages?.length == 0) ? pc.image : currentImage;
       const options = $.extend(true, {}, token.options, pc, { imgsrc: newImage });
       options.conditions = pc.conditions || [];
-      for (let i = 0; i < unusedPlayerData.length; i++) {
-        delete options[unusedPlayerData[i]];
-      }
+      removeUnusedPlayerData(options);
       token.hp = pc.hitPointInfo.current; // triggers concentration checks
       token.options.hitPointInfo = pc.hitPointInfo;
       token.options = $.extend(true, {}, options, { left: token.options.left, top: token.options.top });
@@ -1914,9 +1924,7 @@ const debounce_pc_token_update = mydebounce(() => {
       const newImage = (crossSceneToken.options.alternativeImages == undefined || crossSceneToken.options.alternativeImages?.length == 0) ? pc.image : currentImage;
       const options = $.extend(true, {}, crossSceneToken.options, pc, { imgsrc: newImage });
       options.conditions = pc.conditions || [];
-      for (let i = 0; i < unusedPlayerData.length; i++) {
-        delete options[unusedPlayerData[i]];
-      }
+      removeUnusedPlayerData(options);
       crossSceneToken.hp = pc.hitPointInfo.current; 
       crossSceneToken.options.hitPointInfo = pc.hitPointInfo;
       crossSceneToken.options = $.extend(true, {}, options);

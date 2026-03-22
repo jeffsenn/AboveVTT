@@ -1455,7 +1455,7 @@ async function create_and_place_token(listItem, hidden = undefined, specificImag
             // specificImage = options.imgsrc; // force it to use what we just built
             break;
     }
-    if(options.statBlock && window.JOURNAL.notes[options.statBlock]){
+    if(options.statBlock && window.JOURNAL.notes[options.statBlock] != undefined){
         let statText = $(`<div>${window.JOURNAL.notes[options.statBlock].text}</div>`);
         statText.find('style').remove();
         statText=statText[0].innerHTML;
@@ -1539,6 +1539,7 @@ async function create_and_place_token(listItem, hidden = undefined, specificImag
             try{
                 const charURLparts = pcURL.match(/.*?\/characters\/([0-9]+)(\/.*?)?/i);
                 const charDetails  = await DDBApi.fetchCharacterDetails([charURLparts[1]]);
+                removeUnusedPlayerData(charDetails[0]);
                 options = $.extend(true, {}, charDetails[0], options);
                 options.customStat = options.abilities;
                 if(!options.customInit){
