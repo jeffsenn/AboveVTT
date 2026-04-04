@@ -179,6 +179,22 @@ function build_combat_tracker_loading_indicator(subtext = "One moment while we f
   });
   return loadingIndicator.clone();
 }
+function add_dice_stream_gamelog_button(){    
+  if(window.JOINTHEDICESTREAM == undefined){
+    window.JOINTHEDICESTREAM = window.EXPERIMENTAL_SETTINGS['streamDiceRolls'];
+  }
+  if ($('.stream-dice-button').length == 0){
+    $(".glc-game-log>[class*='Container-Flex']").append($(`<div id="stream_dice"><div class='stream-dice-button ${window.EXPERIMENTAL_SETTINGS['streamDiceRolls'] ? `enabled` : ``}'>Dice Stream ${window.EXPERIMENTAL_SETTINGS['streamDiceRolls'] ? `Enabled` : `Disabled`}</div></div>`));
+    $(".stream-dice-button").off().on("click", function () {
+      if (window.JOINTHEDICESTREAM) {
+        update_dice_streaming_feature(false);
+      }
+      else {
+        update_dice_streaming_feature(true);
+      } 
+    })
+  }
+}
 /**
  * Add Dice buttons into sidebar.
  *
@@ -193,7 +209,7 @@ function inject_chat_buttons() {
     // make sure we only ever inject these once. This gets called a lot on the character sheet which is intentional, but just in case we accidentally call it too many times, let's log it, and return
     return;
   }
-
+  add_dice_stream_gamelog_button();
   const chatTextWrapper = $(`<div class='chat-text-wrapper sidebar-hover-text' data-hover="Dice Rolling Format: /cmd diceNotation action  &#xa;
     '/r 1d20'&#xa;
     '/roll 1d4 punch:bludgeoning damage'&#xa;
@@ -907,20 +923,21 @@ function add_journal_roll_buttons(target, tokenId=undefined, specificImage=undef
 
   
   $(target).find('button.avtt-roll-button[data-rolltype]').each(function(){
-    let rollAction = $(this).prevUntil('em>strong').find('strong').last().text().replace('.', '');
-    rollAction = (rollAction == '') ? $(this).prev('strong').last().text().replace('.', '') : rollAction;
-    rollAction = (rollAction == '') ? $(this).prevUntil('strong').last().prev().text().replace('.', '') : rollAction;
-    rollAction = (rollAction == '') ? $(this).parent().prevUntil('em>strong').find('strong').last().text().replace('.', '') : rollAction;
-    rollAction = (rollAction == '') ? $(this).closest('.mon-stat-block__attribute-value').prev().text().replace('.', '') : rollAction;
-    rollAction = (rollAction == '') ? $(this).closest('.mon-stat-block__tidbit, [class*="styles_attribute"]').find('>.mon-stat-block__tidbit-label, >[class*="styles_attributeLabel"]').text().replace('.', '') : rollAction;
-    let rollType = $(this).attr('data-rolltype')
-    let newStatBlockTables = $(this).closest('table').find('tbody tr:first th').text().toLowerCase();
+    const targetButton = $(this);
+    let rollAction = targetButton.prevUntil('em>strong').find('strong').last().text().replace('.', '');
+    rollAction = (rollAction == '') ? targetButton.prev('strong').last().text().replace('.', '') : rollAction;
+    rollAction = (rollAction == '') ? targetButton.prevUntil('strong').last().prev().text().replace('.', '') : rollAction;
+    rollAction = (rollAction == '') ? targetButton.parent().prevUntil('em>strong').find('strong').last().text().replace('.', '') : rollAction;
+    rollAction = (rollAction == '') ? targetButton.closest('.mon-stat-block__attribute-value').prev().text().replace('.', '') : rollAction;
+    rollAction = (rollAction == '') ? targetButton.closest('.mon-stat-block__tidbit, [class*="styles_attribute"]').find('>.mon-stat-block__tidbit-label, >[class*="styles_attributeLabel"]').text().replace('.', '') : rollAction;
+    let rollType = targetButton.attr('data-rolltype')
+    let newStatBlockTables = targetButton.closest('table').find('tbody tr:first th').text().toLowerCase();
     if(newStatBlockTables.includes('str') || newStatBlockTables.includes('int')){
-      rollAction =  $(this).closest('tr').find('th').text();
-      rollType = $(this).closest('td').index() == 2 ? 'Check' : 'Save'
+      rollAction =  targetButton.closest('tr').find('th').text();
+      rollType = targetButton.closest('td').index() == 2 ? 'Check' : 'Save'
     }
-    else if($(this).closest('table').find('tr:first').text().toLowerCase().includes('str')){
-      let statIndex = $(this).closest('table').find('tr button').index($(this));  
+    else if(targetButton.closest('table').find('tr:first').text().toLowerCase().includes('str')){
+      let statIndex = targetButton.closest('table').find('tr button').index(targetButton);  
       let stats = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA']
       rollAction = stats[statIndex%6];
       if(statIndex > 6)
@@ -928,22 +945,22 @@ function add_journal_roll_buttons(target, tokenId=undefined, specificImage=undef
       else
         rollType = 'Check'
     }
-    else if($(this).closest('.ability-block__stat')?.find('.ability-block__heading').length>0){
-      rollAction = $(this).closest('.ability-block__stat')?.find('.ability-block__heading').text();
+    else if(targetButton.closest('.ability-block__stat, [class*="styles_stat__"]')?.find('.ability-block__heading, [class*="styles_statHeading"]').length>0){
+      rollAction = targetButton.closest('.ability-block__stat, [class*="styles_stat__"]')?.find('.ability-block__heading, [class*="styles_statHeading"]').text();
       rollType = 'Check'
-    }
+    } 
 
     if (rollAction == '' || rollAction == undefined){
       rollAction = 'Roll';
     } 
     else if(rollAction.replace(' ', '').toLowerCase() == 'savingthrows'){ 
-      rollAction = $(this)[0].previousSibling?.nodeValue?.replace(/[\W]+/gi, '');
-      rollAction = (rollAction == '') ? $(this).prev()?.text()?.replace(/[\W]+/gi, '') : rollAction;
+      rollAction = targetButton[0].previousSibling?.nodeValue?.replace(/[\W]+/gi, '');
+      rollAction = (rollAction == '') ? targetButton.prev()?.text()?.replace(/[\W]+/gi, '') : rollAction;
       rollType = 'Save';  
     }
     else if(rollAction.replace(' ', '').toLowerCase() == 'skills'){
-      rollAction = $(this)[0].previousSibling?.nodeValue?.replace(/[\W]+/gi, '');
-      rollAction = (rollAction == '') ? $(this).prev()?.text()?.replace(/[\W]+/gi, '') : rollAction;
+      rollAction = targetButton[0].previousSibling?.nodeValue?.replace(/[\W]+/gi, '');
+      rollAction = (rollAction == '') ? targetButton.prev()?.text()?.replace(/[\W]+/gi, '') : rollAction;
       rollType = 'Check'; 
     }
     else if(rollAction.replace(' ', '').toLowerCase() == 'proficiencybonus'){
@@ -958,14 +975,14 @@ function add_journal_roll_buttons(target, tokenId=undefined, specificImage=undef
       rollType = 'Roll';
     }
     
-    $(this).attr('data-actiontype', rollAction);
-    $(this).attr('data-rolltype', rollType);
+    targetButton.attr('data-actiontype', rollAction);
+    targetButton.attr('data-rolltype', rollType);
 
-    const followingText = $(this)[0].nextSibling?.textContent?.trim()?.split(' ')[0]
+    const followingText = targetButton[0].nextSibling?.textContent?.trim()?.split(' ')[0]
     
     const damageType = followingText && window.ddbConfigJson?.damageTypes?.some(d => d.name.toLowerCase() == followingText.toLowerCase()) ? followingText : undefined
     if(damageType != undefined){
-      $(this).attr('data-damagetype', damageType);
+      targetButton.attr('data-damagetype', damageType);
     }
   })
 
@@ -1002,7 +1019,9 @@ function add_journal_roll_buttons(target, tokenId=undefined, specificImage=undef
     
     
     if (rollData.rollType === "damage") {
-      damage_dice_context_menu(rollData.expression, rollData.modifier, rollData.rollTitle, rollData.rollType, tokenName, tokenImage, entityType, tokenId, damageType, spellSave)
+      const followingText = this.nextSibling?.textContent?.trim()?.split(' ')[0]
+      const damageType = followingText && window.ddbConfigJson.damageTypes.some(d => d.name.toLowerCase() == followingText.toLowerCase()) ? followingText : undefined
+      damage_dice_context_menu(rollData.expression, rollData.modifier, rollData.rollTitle, rollData.rollType, tokenName, tokenImage, entityType, tokenId, damageType, undefined)
         .present(e.clientY, e.clientX) // TODO: convert from iframe to main window
     } else {
       standard_dice_context_menu(rollData.expression, rollData.modifier, rollData.rollTitle, rollData.rollType, tokenName, tokenImage, entityType, tokenId)
@@ -1245,13 +1264,13 @@ function inject_dice(){
      try {
        let mutationTarget = $(mutation.target);
        
-       if(mutationTarget.hasClass(['encounter-details', 'encounter-builder', 'release-indicator'])){
+       if(mutationTarget.is('.encounter-details, .encounter-builder, .release-indicator')){
          mutationTarget.remove();
        }
        if($(mutation.addedNodes).is('.encounter-builder, .release-indicator')){
          $(mutation.addedNodes).remove();
        }
-     } catch{
+     } catch(error){
        console.warn("non_sheet_observer failed to parse mutation", error, mutation);
      }
    });
@@ -1268,6 +1287,13 @@ function inject_dice(){
    delete window.encounterObserver;
  }, 300000);
  
+}
+
+function sendPointerEvent(targetSelector='', type="pointerdown", options = {}){
+  const pointerEvent = new PointerEvent(type, options)
+  const target = $(targetSelector);
+  console.assert(target.length>0, `Target not found for pointer event. Target selector: ${targetSelector}`, pointerEvent);
+  target[0]?.dispatchEvent(pointerEvent);
 }
 /**
  * Creates a transparent context background that can be clicked to close items
@@ -1766,7 +1792,7 @@ function color_from_pc_object(pc) {
   if (!isDefaultTheme && pc.decorations?.characterTheme?.themeColor) { // only the DM can use the default theme color
     return pc.decorations.characterTheme.themeColor;
   } else {
-    const pcIndex = window.pcs.findIndex(p => p.id === p.id);
+    const pcIndex = window.pcs.findIndex(p => p.id === pc.id);
     return get_token_color_by_index(pcIndex);
   }
 }
@@ -1870,6 +1896,10 @@ function get_my_known_languages() {
 function update_pc_with_data(playerId, data) {
   if (data.constructor !== Object) {
     console.warn("update_pc_with_data was given invalid data", playerId, data);
+    return;
+  }
+  if(!window.pcs){
+    console.warn('update_pc_with_data called before window.pcs initialized');
     return;
   }
   const index = window.pcs.findIndex(pc => pc.sheet.includes(playerId));
@@ -2485,7 +2515,19 @@ function inject_sidebar_send_to_gamelog_button(sidebarPaneContent) {
     
   });
 }
-
+function chat_command_error(message = `Invalid roll. Hover the input to see valid formats`) {
+  const chatWrapper = $('.chat-text-wrapper');
+  const chatTextFocus = $('#chat-text:focus');
+  chatTextFocus.addClass("chat-error-shake");
+  chatWrapper.attr('data-content', message);
+  chatWrapper.addClass('invalidExpression');
+  setTimeout(function () {
+        chatTextFocus.removeClass("chat-error-shake");
+  }, 150);
+  setTimeout(function () {
+        chatWrapper.removeClass('invalidExpression');
+  }, 3000);
+}
 function find_items_in_cache_by_id_and_name(items = []) {
   const foundItems = [];
   for (let item of items) {
@@ -2714,7 +2756,8 @@ function display_url_embeded(url){
 
 function find_or_create_generic_draggable_window(id, titleBarText, addLoadingIndicator = true, addPopoutButton = false, popoutSelector=``, width='80%', height='80%', top='10%', left='10%', showSlow = true, cancelClasses='', hideOnX = false, alwaysDisplayTitle = false) {
   console.log(`find_or_create_generic_draggable_window id: ${id}, titleBarText: ${titleBarText}, addLoadingIndicator: ${addLoadingIndicator}, addPopoutButton: ${addPopoutButton}`);
-  const existing = id.startsWith("#") ? $(id) : $(`#${id}`);
+
+  const existing = $(`[id="${id.replace('#', '')}"]`);
   if (existing.length > 0) {
     return existing;
   }
@@ -2888,7 +2931,7 @@ function find_or_create_generic_draggable_window(id, titleBarText, addLoadingInd
 }
 
 function close_and_cleanup_generic_draggable_window(id) {
-  const container = id.startsWith("#") ? $(id) : $(`#${id}`);
+  const container = $(`[id="${id.replace('#', '')}"]`);
   container.off('dblclick');
   container.off('mousedown');
   container.draggable('destroy');

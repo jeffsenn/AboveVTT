@@ -1585,7 +1585,7 @@ class MonsterStatBlock {
               return match.toUpperCase();
           });
         }
-        if (this.data.conditionImmunitiesHtml === "string" && this.data.conditionImmunitiesHtml.length > 0) {
+        if (typeof this.data.conditionImmunitiesHtml === "string" && this.data.conditionImmunitiesHtml.length > 0) {
             return this.data.conditionImmunitiesHtml;
         }
         if (!this.data.conditionImmunities || this.data.conditionImmunities.length === 0) {
@@ -1745,7 +1745,7 @@ class MonsterStatBlock {
                     nextUrl = parts.join("/");
                     el.attr("data-current-avatar-url", "hacky");
                 } catch (error) {
-                    console.warn("imageHtml failed to hack the largeAvatarUrl", el, e);
+                    console.warn("imageHtml failed to hack the largeAvatarUrl", el, error);
                     nextUrl = el.attr("data-avatar-url");
                     el.attr("data-current-avatar-url", "avatarUrl");
                 }

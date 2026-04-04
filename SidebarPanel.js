@@ -791,9 +791,9 @@ class SidebarListItem {
     item.shape = shape;
     let parsedSize = parseInt(size);
     if (isNaN(parsedSize)) {
-      item.size = parsedSize;
-    } else {
       item.size = 1;
+    } else {
+      item.size = parsedSize;
     }
     item.style = style;
     return item;
@@ -911,7 +911,7 @@ class SidebarListItem {
           case ItemType.Scene:
           case ItemType.PC:
           case ItemType.Encounter:
-            if(this.encounterId == undefined)
+            if(this.encounterId == undefined && this.folderPath != '/')
               return true;
           default:
             return false;
@@ -919,15 +919,6 @@ class SidebarListItem {
       case ItemType.MyToken:
       case ItemType.Scene:
         return true;
-      case ItemType.PC:
-      case ItemType.Monster:
-      case ItemType.isTypeOpen5eMonster:
-      case ItemType.BuiltinToken:
-      case ItemType.Encounter:
-        if(this.encounterId != undefined)
-          return false;
-        else
-          return true;
       case ItemType.Aoe: // we technically could support this, but I don't think we should
       default:
         return false;
@@ -1048,7 +1039,7 @@ async function avttTokenCollectAssets(folderRelativePath) {
       continue;
     }
     for (const entry of entries) {
-      const keyValue = typeof entry === "string" ? entry : entry?.Key || entry?.key || "";
+      const keyValue = typeof entry === "string" ? entry : entry?.Key || "";
       if (!keyValue) {
         continue;
       }
@@ -2673,10 +2664,18 @@ function edit_encounter(clickEvent) {
 
                     
             }
-            if(crText != '' && crText != undefined)
-              cr = eval(crText);   
-            else
+            if(crText != '' && crText != undefined){
+              try{
+                cr = eval(crText); 
+              }catch(e){
+                console.warn(`Could not parse CR from custom stat block, defaulting to 0. CR text was ${crText}`);
+                cr = 0;
+              }
+            }
+            else{
               cr = 0;
+            }
+
           }
         }
         for(let j = 0; j<item.quantity; j++ ){

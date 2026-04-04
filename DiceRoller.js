@@ -135,18 +135,7 @@ class DiceRoll {
 
         if (!parsedExpression.match(validExpressionRegex)) {
             console.warn("Not parsing expression because it contains an invalid character", expression);          
-            $('#chat-text:focus').addClass("chat-error-shake");
-            $('.chat-text-wrapper').attr('data-content',`Invalid roll. Hover the input to see valid formats`);
-            $('.chat-text-wrapper').addClass('invalidExpression');
-           
-            setTimeout(function () {
-                 $('#chat-text:focus').removeClass("chat-error-shake");
-            }, 150);
-
-            setTimeout(function () {
-                  $('.chat-text-wrapper').removeClass('invalidExpression');
-            }, 3000);
-
+            chat_command_error();
             throw new Error("Invalid Expression");
         }
 
@@ -157,16 +146,7 @@ class DiceRoll {
         }
         if (!separateDiceExpressions) {
             console.warn("Not parsing expression because there are no valid dice expressions within it", expression);
-            $('#chat-text:focus').addClass("chat-error-shake");
-            $('.chat-text-wrapper').attr('data-content',`Invalid roll. Hover the input to see valid formats`);
-            $('.chat-text-wrapper').addClass('invalidExpression');
-           
-            setTimeout(function () {
-                 $('#chat-text:focus').removeClass("chat-error-shake");
-            }, 150);
-            setTimeout(function () {
-                  $('.chat-text-wrapper').removeClass('invalidExpression');
-            }, 3000);
+            chat_command_error();
             throw new Error("Invalid Expression");
         }
          $('.chat-text-wrapper').removeClass('invalidExpression');
@@ -258,38 +238,38 @@ function getRollData(rollButton){
     let expression = '';
     let rollType = 'custom';
     let rollTitle = 'AboveVTT';
-    
+    const $rollButton = $(rollButton);
     let damageType = window.diceRoller.getDamageType(rollButton);
-    if($(rollButton).find('.ddbc-damage__value, .ct-spell-caster__modifier-amount').length>0){
-      expression = $(rollButton).find('.ddbc-damage__value, .ct-spell-caster__modifier-amount').text();
+    if($rollButton.find('.ddbc-damage__value, .ct-spell-caster__modifier-amount').length>0){
+      expression = $rollButton.find('.ddbc-damage__value, .ct-spell-caster__modifier-amount').text();
       const damageRollRegex = /([:\s>]|^)(([0-9]+d[0-9]+)\s?([+-]\s?[0-9]+)?)([\.\):\s<,]|$)|^\d+$/gi
       expression = `${expression.match(damageRollRegex)[0].replace(/\s*/gi, '')}`
 
-      if($(rollButton).find('.ct-spell-caster__modifier-amount').length>0){
+      if($rollButton.find('.ct-spell-caster__modifier-amount').length>0){
         rollType ='damage';
-        rollTitle = $(rollButton).closest('[class*="styles_content"]')?.find('[class*="styles_spellName"]')?.text() || rollTitle;
-        damageType = $(rollButton).next()?.find('[class*="damage-type"][aria-label]')?.attr('aria-label')?.replace(' damage', '') || damageType;
+        rollTitle = $rollButton.closest('[class*="styles_content"]')?.find('[class*="styles_spellName"]')?.text() || rollTitle;
+        damageType = $rollButton.next()?.find('[class*="damage-type"][aria-label]')?.attr('aria-label')?.replace(' damage', '') || damageType;
       }
     }
-    else if($(rollButton).find('.ddbc-signed-number').length>0){
-      expression = `1d20${$(rollButton).find('.ddbc-signed-number').attr('aria-label').replace(/\s/g, '')}`;
+    else if($rollButton.find('.ddbc-signed-number').length>0){
+      expression = `1d20${$rollButton.find('.ddbc-signed-number').attr('aria-label').replace(/\s/g, '')}`;
     }
-    else if($(rollButton).find('.ddbc-healing-icon').length > 0){
-      expression = $(rollButton).text().replace(/\s/g, '');
+    else if($rollButton.find('.ddbc-healing-icon').length > 0){
+      expression = $rollButton.text().replace(/\s/g, '');
     }
-    else if($(rollButton).find('[class*="styles_numberDisplay"]').length > 0){
-      expression = `1d20${$(rollButton).text().replace(/\s/g, '')}`;
+    else if($rollButton.find('[class*="styles_numberDisplay"]').length > 0){
+      expression = `1d20${$rollButton.text().replace(/\s/g, '')}`;
     }
-    else if($(rollButton).hasClass('avtt-roll-button')){
-      expression = `${$(rollButton).attr('data-exp')}${$(rollButton).attr('data-mod')}`
-      rollTitle = $(rollButton).attr('data-actiontype');
-      rollType = $(rollButton).attr('data-rolltype');
+    else if($rollButton.hasClass('avtt-roll-button')){
+      expression = `${$rollButton.attr('data-exp')}${$rollButton.attr('data-mod')}`
+      rollTitle = $rollButton.attr('data-actiontype');
+      rollType = $rollButton.attr('data-rolltype');
     }
-    if($(rollButton).hasClass('avtt-roll-formula-button')){
-      let slashCommand = DiceRoll.fromSlashCommand($(rollButton).attr('data-slash-command'))
+    if($rollButton.hasClass('avtt-roll-formula-button')){
+      let slashCommand = DiceRoll.fromSlashCommand($rollButton.attr('data-slash-command'))
       expression = slashCommand.expression;
       damageType = slashCommand.damageType;
-      let title = $(rollButton).attr('title').split(':');
+      let title = $rollButton.attr('title').split(':');
       if(title != undefined && title[0] != undefined){
         rollTitle = title[0];
       }
@@ -304,45 +284,45 @@ function getRollData(rollButton){
     }
 
 
-    if($(rollButton).parents(`[class*='saving-throws-summary']`).length > 0){
+    if($rollButton.parents(`[class*='saving-throws-summary']`).length > 0){
       rollType = 'save'
-      rollTitle = $(rollButton).closest(`.ddbc-saving-throws-summary__ability`).find('.ddbc-saving-throws-summary__ability-name abbr').text();
-    } else if($(rollButton).parents(`[class*='ability-summary']`).length > 0){
+      rollTitle = $rollButton.closest(`.ddbc-saving-throws-summary__ability`).find('.ddbc-saving-throws-summary__ability-name abbr').text();
+    } else if($rollButton.parents(`[class*='ability-summary']`).length > 0){
       rollType = 'check'
-      rollTitle = $(rollButton).closest(`.ddbc-ability-summary`).find('.ddbc-ability-summary__abbr').text();
-    } else if($(rollButton).parents(`[class*='skills__col']`).length > 0){
+      rollTitle = $rollButton.closest(`.ddbc-ability-summary`).find('.ddbc-ability-summary__abbr').text();
+    } else if($rollButton.parents(`[class*='skills__col']`).length > 0){
       rollType = 'check';
-      rollTitle = $(rollButton).closest(`.ct-skills__item`).find('.ct-skills__col--skill').text();
-    } else if($(rollButton).parents(`[class*='initiative-box'],  .ct-combat-tablet__extra--initiative, .ct-combat__summary-group--initiative`).length > 0 || $(rollButton).closest('[class*="styles_boxMobile"]').find('[class*="styles_labelMobile"]').text() == "Initiative"){
+      rollTitle = $rollButton.closest(`.ct-skills__item`).find('.ct-skills__col--skill').text();
+    } else if($rollButton.parents(`[class*='initiative-box'],  .ct-combat-tablet__extra--initiative, .ct-combat__summary-group--initiative`).length > 0 || $rollButton.closest('[class*="styles_boxMobile"]').find('[class*="styles_labelMobile"]').text() == "Initiative"){
       rollTitle = 'Initiative';
       rollType = 'check'
-    } else if($(rollButton).parents(`[class*='__damage']`).length > 0){
+    } else if($rollButton.parents(`[class*='__damage']`).length > 0){
       rollType = 'damage'
-      if($(rollButton).parents(`[class*='damage-effect__healing']`).length > 0){
+      if($rollButton.parents(`[class*='damage-effect__healing']`).length > 0){
         rollType = 'heal'
       }
-    } else if($(rollButton).parents(`[class*='__tohit']`).length > 0){
+    } else if($rollButton.parents(`[class*='__tohit']`).length > 0){
       rollType = 'to hit'
     } 
     if(rollType == 'damage' || rollType == 'attack' || rollType == 'to hit' || rollType == 'heal'){
-      if($(rollButton).parents(`.ddbc-combat-attack--spell`).length > 0){
-        rollTitle = $(rollButton).closest(`.ddbc-combat-attack--spell`).find('[class*="styles_spellName"]').text();
+      if($rollButton.parents(`.ddbc-combat-attack--spell`).length > 0){
+        rollTitle = $rollButton.closest(`.ddbc-combat-attack--spell`).find('[class*="styles_spellName"]').text();
       }
-      else if($(rollButton).parents(`.ct-spells-spell`).length > 0){
-        rollTitle = $(rollButton).closest(`.ct-spells-spell`).find('[class*="styles_spellName"]').text();
+      else if($rollButton.parents(`.ct-spells-spell`).length > 0){
+        rollTitle = $rollButton.closest(`.ct-spells-spell`).find('[class*="styles_spellName"]').text();
       }
-      else if($(rollButton).parents(`.ddbc-combat-action-attack-weapon`).length > 0){
-        rollTitle = $(rollButton).closest(`.ddbc-combat-action-attack-weapon`).find('.ddbc-action-name, [class*="styles_actionName"]').text();
+      else if($rollButton.parents(`.ddbc-combat-action-attack-weapon`).length > 0){
+        rollTitle = $rollButton.closest(`.ddbc-combat-action-attack-weapon`).find('.ddbc-action-name, [class*="styles_actionName"]').text();
       }
-      else if($(rollButton).parents(`.ddbc-combat-attack--item`).length > 0){
-        rollTitle = $(rollButton).closest(`.ddbc-combat-attack--item`).find('.ddbc-item-name, [class*="styles_itemName"]').text();
+      else if($rollButton.parents(`.ddbc-combat-attack--item`).length > 0){
+        rollTitle = $rollButton.closest(`.ddbc-combat-attack--item`).find('.ddbc-item-name, [class*="styles_itemName"]').text();
       }
-      else if($(rollButton).parents(`.ddbc-combat-action-attack-general`).length > 0){
-        rollTitle = $(rollButton).closest(`.ddbc-combat-action-attack-general`).find('.ddbc-action-name, [class*="styles_actionName"]').text();
+      else if($rollButton.parents(`.ddbc-combat-action-attack-general`).length > 0){
+        rollTitle = $rollButton.closest(`.ddbc-combat-action-attack-general`).find('.ddbc-action-name, [class*="styles_actionName"]').text();
       }
     }
     
-    expression = adjustRollWithRollBuffs(expression, rollType, rollButton);
+    expression = adjustRollWithRollBuffs(expression, rollType, $rollButton);
 
     let roll = new rpgDiceRoller.DiceRoll(expression); 
     let regExpression = new RegExp(`${expression.replace(/[+-]/g, '\\$&')}:\\s`);
@@ -351,7 +331,7 @@ function getRollData(rollButton){
   
 
 
-    const followingText = $(rollButton)[0].nextSibling?.textContent?.trim()?.split(' ')[0]
+    const followingText = $rollButton[0].nextSibling?.textContent?.trim()?.split(' ')[0]
     damageType = followingText && window.ddbConfigJson.damageTypes.some(d => d.name.toLowerCase() == followingText.toLowerCase()) ? followingText : damageType;     
 
 
@@ -381,8 +361,8 @@ const rollTypeKeys = Object.freeze({
     'check': { 'char': 'checkRoll', 'buff':'check'}
 });
 
-function adjustRollWithRollBuffs(expression, rollType, rollButton){
-    if (rollButton.closest('.ct-character-sheet__inner').length == 0)
+function adjustRollWithRollBuffs(expression, rollType, $rollButton){
+    if ($rollButton.closest('.ct-character-sheet__inner').length == 0)
         return expression;
     
     const rollBuffs = window.rollBuffs;
@@ -397,7 +377,7 @@ function adjustRollWithRollBuffs(expression, rollType, rollButton){
 
     if (typeof rollBuffs == 'undefined') 
         return expression;
-    const $rollButton = $(rollButton);
+
     for (let i in rollBuffs) {
         const currBuffSet = rollBuffs[i];
         const isMultiOption = Array.isArray(currBuffSet);
@@ -415,16 +395,16 @@ function adjustRollWithRollBuffs(expression, rollType, rollButton){
 
         const multiReplaceRegex = targetMultiOptions?.replace;
         const multiReplaceSelector = targetMultiOptions?.replaceType
-        const validMultiButton = multiReplaceSelector?.[rollType] != undefined && $rollButton.closest(multiReplaceSelector[rollType]).length > 0
+        const validMultiButton = (multiReplaceSelector == undefined || multiReplaceSelector?.[rollType] != undefined && $rollButton.closest(multiReplaceSelector[rollType]).length > 0);
         
         const singleReplaceRegex = singleTarget?.replace;
-        const singleReplaceSelector = singleTarget?.replaceType?.[rollType];
-        const validSingleButton = singleReplaceSelector != undefined && $rollButton.closest(singleReplaceSelector).length > 0;
+        const singleReplaceSelector = singleTarget?.replaceType;
+        const validSingleButton = singleReplaceSelector == undefined || (singleReplaceSelector?.[rollType] != undefined && $rollButton.closest(singleReplaceSelector[rollType]).length > 0);
        
-        if (multiReplaceRegex != undefined && (multiReplaceSelector == undefined || validMultiButton)) {
+        if (multiReplaceRegex != undefined && validMultiButton) {
             expression = `${expression.replace(multiReplaceRegex, targetMultiOptions.newRoll)}`   
         }
-        else if (!isMultiOption && singleReplaceRegex != undefined && (singleReplaceSelector == undefined || validSingleButton)){
+        else if (!isMultiOption && singleReplaceRegex != undefined && validSingleButton){
             expression = `${expression.replace(singleReplaceRegex, singleTarget.newRoll)}` 
         }
     }
@@ -726,7 +706,8 @@ class DiceRoller {
                           msg: msgdata,
                           multiroll: multiroll,
                           critRange: critRange,
-                          critType: critType
+                          critType: critType,
+                          forceCritType: forceCritType
                         });
                     self.#resetVariables();
                     self.nextRoll(undefined, critRange, critType)
@@ -957,7 +938,7 @@ class DiceRoller {
                         let cleanerString = currentRoll.toString()
                             .replace("[", "(")    // swap square brackets with parenthesis
                             .replace("]", ")")    // swap square brackets with parenthesis
-                            .replace("d", "")     // remove all drop notations
+                            .replace(/d/g, "")     // remove all drop notations
                             .replace(/\s+/g, ''); // remove all whitespace
                         convertedExpression.push(cleanerString);
                     } else {
@@ -995,7 +976,7 @@ class DiceRoller {
                 }
             }
             if (sendTo == '') {
-                sendTo = gamelog_send_to_text().trim().replace('/\s/gi', '');
+                sendTo = gamelog_send_to_text().trim().replace(/\s/gi, '');
             }
             sendTo = sendTo.toLowerCase();
             const rollId = uuid();
@@ -1112,9 +1093,9 @@ class DiceRoller {
         this.ddbDispatch(alteredMessage);
         if(this.#multiRollArray.length>0){
             const self = this;
-            const nextCritRange = self.#pendingMessages[ddbMessage.data.rollId].pendingCritRange;
-            const nextCritType = self.#pendingMessages[ddbMessage.data.rollId].pendingCritType;
-            const nextDamageType = self.#pendingMessages[ddbMessage.data.rollId].pendingDamageType;
+            const nextCritRange = self.#pendingMessages[firstPending]?.pendingCritRange;
+            const nextCritType = self.#pendingMessages[firstPending]?.pendingCritType;
+            const nextDamageType = self.#pendingMessages[firstPending]?.pendingDamageType;
             setTimeout(function () {
                 if (newDice) {
                     self.nextRoll(alteredMessage, nextCritRange, nextCritType, nextDamageType);

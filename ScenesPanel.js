@@ -2493,7 +2493,7 @@ async function avttScenesCollectAssets(folderRelativePath) {
 			continue;
 		}
 		for (const entry of entries) {
-			const keyValue = typeof entry === "string" ? entry : entry?.Key || entry?.key || "";
+			const keyValue = typeof entry === "string" ? entry : entry?.Key || "";
 			if (!keyValue) {
 				continue;
 			}
@@ -3608,7 +3608,7 @@ async function build_source_book_chapter_import_section(sceneSet) {
 			})
 			.catch(error => {
 				$(`body>.import-loading-indicator`).remove();
-				showError(error, "Failed to import scene", importData);
+				showError(error, "Failed to import scene", sceneData);
 			});
 	})
 		
