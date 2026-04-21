@@ -250,7 +250,7 @@ const debounceSyncMeUp = mydebounce(()=>{
 class MessageBroker {
 
 	loadAboveWS(callback=null){
-		if(is_gamelog_popout() || !is_abovevtt_page())
+		if(is_gamelog_popout() || (!is_abovevtt_page()))
 			return;
 		let self=this;
 
@@ -411,7 +411,7 @@ class MessageBroker {
 			return;
 		}
 		window.MB.chat_message_history.unshift(data);
-		if (window.MB.chat_message_history > 100) {
+		if (window.MB.chat_message_history.length > 100) {
 			window.MB.chat_message_history.pop();
 		}
 	}
@@ -917,7 +917,6 @@ class MessageBroker {
 				"custom/myVTT/createtoken",
 				"custom/myVTT/reveal",
 				"custom/myVTT/fogdata",
-				"custom/myVTT/drawing",
 				"custom/myVTT/drawdata",
 				"custom/myVTT/highlight",
 				"custom/myVTT/pointer",
@@ -1069,14 +1068,21 @@ class MessageBroker {
 			} else
 
 			if(msg.eventType=="custom/myVTT/drawdata"){
+				const wallsChanged = msg.data?.[0] == 'wallsChanged';
+				if(wallsChanged){
+					msg.data.shift();
+				}
 				window.DRAWINGS=msg.data;
-				redraw_light_walls();
+				redraw_light_walls({wallsChanged});
 				redraw_elev();
 				redraw_drawings();
 				redraw_text();
 				redraw_drawn_light();
 				redraw_light();
 			} else
+				if(wallsChanged)
+					redraw_fog();// for point line of sight fog tool that is line of sight bucket fill stopped by walls
+			}
 			if(msg.eventType=="custom/myVTT/forceRedrawLight"){
 				redraw_light(true);
 			} else
@@ -1748,7 +1754,8 @@ class MessageBroker {
 				$("#VTT").css("--scene-scale", scaleFactor)
 				window.CURRENT_SCENE_DATA.width = mapWidth;
 				window.CURRENT_SCENE_DATA.height = mapHeight;
-				await reset_canvas(false);
+				const continueLoading = await reset_canvas(false);
+				if(!continueLoading) return;
 
 				if(!isSameTokenLight){
 					for(let i in window.TOKEN_OBJECTS){
@@ -1765,6 +1772,8 @@ class MessageBroker {
 				window.wallUndo = [];
 				window.visionBlockingTokenCache = {};
 				window.lightDrawingLosCache = {};
+				window.lightAuraClipPolygon = {};
+				window.lineOfSightPolygons = {};
 				$('#exploredCanvas').remove();
 				window.TOKEN_OBJECTS = {};
 				window.ON_SCREEN_TOKENS = {};
@@ -1772,16 +1781,16 @@ class MessageBroker {
 				let data = msg.data;
 				let self=this;
 
-					if(data.dm_map_usable=="1"){ // IN THE CLOUD WE DON'T RECEIVE WIDTH AND HEIGT. ALWAYS LOAD THE DM_MAP FIRST, AS TO GET THE PROPER WIDTH
-						data.map=data.dm_map;
-						if(data.dm_map_is_video=="1" || data.dm_map?.includes('youtube.com') || data.dm_map?.includes("youtu.be"))
-							data.is_video=true;
-					}
-					else{
-						data.map=data.player_map;
-						if(data.player_map_is_video=="1")
-							data.is_video=true;
-					}
+				if(data.dm_map_usable=="1"){ // IN THE CLOUD WE DON'T RECEIVE WIDTH AND HEIGT. ALWAYS LOAD THE DM_MAP FIRST, AS TO GET THE PROPER WIDTH
+					data.map=data.dm_map;
+					if(data.dm_map_is_video=="1" || data.dm_map?.includes('youtube.com') || data.dm_map?.includes("youtu.be"))
+						data.is_video=true;
+				}
+				else{
+					data.map=data.player_map;
+					if(data.player_map_is_video=="1")
+						data.is_video=true;
+				}
 
 				for(const i in msg.data.tokens){
 					if(i == msg.data.tokens[i].id)
@@ -1855,8 +1864,7 @@ class MessageBroker {
 						window.REVEALED = [];
 					}
 					if (typeof data.drawings !== "undefined") {
-						window.DRAWINGS = data.drawings;
-
+						window.DRAWINGS = data.drawings.filter(d => d != 'wallsChanged');
 					}
 					else {
 						window.DRAWINGS = [];
@@ -1938,7 +1946,12 @@ class MessageBroker {
 						}
 
 
-						await reset_canvas();
+						const continueLoading = await reset_canvas();
+						if(!continueLoading){
+							console.groupEnd();
+							window.MB.loadNextScene();
+							return;
+						}
         				await set_default_vttwrapper_size();
 						$('.import-loading-indicator .percentageLoaded').css('width', `20%`);	
 						remove_loading_overlay();

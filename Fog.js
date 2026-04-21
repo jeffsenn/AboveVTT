@@ -1,4 +1,10 @@
 const POLYGON_CLOSE_DISTANCE = 15;
+const WALL_UNDO_MAX = 100;
+function pushWallUndo(entry) {
+	if (!window.wallUndo) window.wallUndo = [];
+	window.wallUndo.push(entry);
+	if (window.wallUndo.length > WALL_UNDO_MAX) window.wallUndo.shift();
+}
 const doorColors = {
 	0: {
 		'open': "rgba(255, 100, 255, 0.5)", // door
@@ -68,15 +74,21 @@ function sync_fog(){
 	window.MB.sendMessage("custom/myVTT/fogdata",window.REVEALED);
 }
 
-function sync_drawings(newDraw = true){
-
+function sync_drawings(options = {newDraw: true, wallsChanged: false}){
+	const {newDraw, wallsChanged} = {newDraw: true, wallsChanged: false, ...options};
 	if(!window.DM && newDraw == true){
 		if(window.playerDrawUndo == undefined)
 			window.playerDrawUndo = [];
 		window.playerDrawUndo.push(window.DRAWINGS[window.DRAWINGS.length-1]);
+		if (window.playerDrawUndo.length > WALL_UNDO_MAX) window.playerDrawUndo.shift();
 	}
-	
+	if(wallsChanged)
+		window.DRAWINGS.unshift("wallsChanged");
+
 	window.MB.sendMessage("custom/myVTT/drawdata",window.DRAWINGS);
+
+	if(wallsChanged)
+		window.DRAWINGS.shift();
 }
 
 
@@ -1305,7 +1317,7 @@ function redraw_grid(hpps=null, vpps=null, offsetX=null, offsetY=null, color=nul
 	draw_svg_grid(null, hpps, vpps, offsetX, offsetY, color, lineWidth, subdivide, dash);	
 }
 
-function draw_select_box(x0, y0, w, h, inside=false, selbox=false, group=false) {
+function draw_select_box(x0, y0, w, h, inside=false, selbox=false, group=false, aoeRotate=false) {
 	const sf = window.CURRENT_SCENE_DATA.scale_factor || 1.0;
 	$("#VTT").css({'--selbox-x': `${x0}`,
 		       '--selbox-y': `${y0}`,
@@ -1332,9 +1344,13 @@ function draw_select_box(x0, y0, w, h, inside=false, selbox=false, group=false) 
 	document.getElementById('selbox-rect')?.setAttribute('visibility', selbox ? 'visible' : 'hidden');
 	//$("#dragbox").css("mix-blend-mode", selbox ? "" : "difference"); //helps with visibility
 	if(selbox) {
-		if(group) {
+		if(group || aoeRotate) {
+			const aoeSvg = document.getElementById('aoeRotateSvg');
+			const regSvg = document.getElementById('groupRotateSvg');
 			rg2.setAttribute('transform', `translate(${(x0+w) / sf}, ${y0 / sf})`);
 			rg2.setAttribute('visibility','visible');
+			aoeSvg.setAttribute('visibility', aoeRotate ? 'visible' : 'hidden');
+			regSvg.setAttribute('visibility', !aoeRotate ? 'visible' : 'hidden');
 		} else {
 			rg2.setAttribute('visibility','hidden');
 		}
@@ -1350,6 +1366,8 @@ function hide_select_box() {
 	document.getElementById('selbox-rect')?.setAttribute('visibility', 'hidden');
 	document.getElementById('rot-grab')?.setAttribute('visibility', 'hidden');
 	document.getElementById('group-rot-grab')?.setAttribute('visibility', 'hidden');
+	document.getElementById('aoeRotateSvg')?.setAttribute('visibility', 'hidden');
+	document.getElementById('groupRotateSvg')?.setAttribute('visibility', 'hidden');
 }
 		
 function hide_wizarding_box() {
@@ -1408,6 +1426,16 @@ function reset_canvas(apply_zoom=true) {
 	const sceneMapWidth = $("#scene_map").width();
 	const sceneMapHeight = $("#scene_map").height();
 
+	if (!sceneMapWidth || !sceneMapHeight) {
+		showErrorMessage("Error loading scene.", `<p>Possible issues:</p>• The scene map link may be blank<br>• If using a video map ensure the "video map" toggle is enabled<br>• The file may not be publicly accessible (check share settings on host)<br>• The host may have rate limits on file access`);
+		set_default_vttwrapper_size();
+		$('#loadingStyles').remove();
+		$('.import-loading-indicator').remove();
+		remove_loading_overlay();
+		delete window.LOADING;
+		return false;
+	}
+
 	$('#darkness_layer').css({"width": sceneMapWidth, "height": sceneMapHeight});
 	$("#scene_map_container").css({"width": sceneMapWidth, "height": sceneMapHeight});
 	// grid overlay css tiling needs a container to fill that matches map
@@ -1436,7 +1464,7 @@ function reset_canvas(apply_zoom=true) {
 	if (!window.FOG_OF_WAR) {
 		const canvas = document.getElementById("fog_overlay");
 		canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
-		return;
+		return true;
 	}
 
 	setVisionLightOffscreenCanvas(); //adding this here as it was previously being done every fill causing webgl issues
@@ -1448,9 +1476,6 @@ function reset_canvas(apply_zoom=true) {
 	redraw_elev();
 	set_weather_size(sceneMapWidth, sceneMapHeight);
 
-
- 	delete window.lightAuraClipPolygon;
- 	delete window.lineOfSightPolygons;
 
 	window.temp_canvas = document.getElementById("temp_overlay");;
 	window.temp_context = window.temp_canvas.getContext("2d");
@@ -1476,7 +1501,7 @@ function reset_canvas(apply_zoom=true) {
 	if(apply_zoom)
 		apply_zoom_from_storage();
 	redraw_text();
-	return;
+	return true;
 }
 function check_darkness_value(){
 	
@@ -1859,7 +1884,8 @@ function redraw_drawings() {
 			targetCtx.save();
 			targetCtx.filter = `blur(${lineBlur}px)`;
 		}
-		else if (shape == "eraser") {
+		
+		if (shape == "eraser") {
 			if (lineBlur != undefined) {
 				targetCtx.globalCompositeOperation = 'destination-out';
 				drawRect(targetCtx, x, y, width, height, '#000', true, 0);
@@ -2047,6 +2073,10 @@ function check_token_elev(tokenid, elevContext=undefined){
 
 function redraw_drawn_light(darknessMoved = false){
 	let lightCanvas = document.getElementById("light_overlay");
+	if (!lightCanvas?.width || !lightCanvas?.height) {
+		console.warn('Attempted light draw without scene being loaded or missing image');
+		return;
+	}
 	let lightCtx = lightCanvas.getContext("2d");
 	lightCtx.clearRect(0, 0, lightCanvas.width, lightCanvas.height);
 	const drawings = window.DRAWINGS.filter(d => d[1] == "light")
@@ -2152,7 +2182,28 @@ function setVisionLightOffscreenCanvas(){
 	create_or_set_offscreen_canvas('devilsightCanvas'); //devilsight canvas is used to combine with darkness aoe (or other magical darkness sources if implemented)
 	create_or_set_offscreen_canvas('truesightCanvas'); //this is stored and checked against in vision checks for invisible creatures (also works like devilsight for magical darkness)
 }
-function redraw_light_walls(clear=true, editingWallPoints = false){
+/*
+Clears and redraws all walls from window.DRAWINGS, also redraws wall heights if present.
+Rebuilds window.walls with Boundary objects for all walls.
+Places or adjusts door buttons with their current state.
+This stores line of sight data for 'point LoS' drawing tools, in draw, elev, light, fog menus.
+
+Options
+	clear: if true clears the canvas that shows the walls to the DM.
+			Used to force clearing this canvas when displayWalls is not expected to be true.
+			Most of the time we will want to clear this as we are immediately redrawing to that canvas. 
+			It also means less data stored in memory when not displaying walls as a cleared canvas is less memory then one with drawings on it
+	editingWallPoints: if true we have edit points selected, do reduced checks while we move/scale walls to prevent lag while editing.
+	wallsChanged: if true, force clearing the window.lightDrawingLosCache which stores line of sight data for 'point LoS' drawing tools, in draw, elev, light, fog menus. 
+					this is cleared on scene load already so this is only used when editing walls.
+*/
+function redraw_light_walls(options = {clearCanvas: true, editingWallPoints: false, wallsChanged: false}){
+	const {clearCanvas, editingWallPoints, wallsChanged} = {clearCanvas: true, editingWallPoints: false, wallsChanged: false, ...options};
+	if (wallsChanged){
+		window.lightDrawingLosCache = {};
+		window.lightAuraClipPolygon = {};
+		window.lineOfSightPolygons = {};
+	} 
 	let showWallsToggle = $('#show_walls').hasClass('button-enabled');
 	let canvas = document.getElementById("walls_layer");	
 
@@ -2168,7 +2219,7 @@ function redraw_light_walls(clear=true, editingWallPoints = false){
 	}
 	const { sceneWidth, sceneHeight } = getSceneMapSize();
 
-	if(displayWalls == true || clear)
+	if(displayWalls == true || clearCanvas)
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 
@@ -2216,7 +2267,7 @@ function redraw_light_walls(clear=true, editingWallPoints = false){
 
 		scale = (scale == undefined) ?  currentSceneScale/currentSceneConversion : scale/currentSceneConversion;
 		let adjustedScale = scale/currentSceneScale;
-		lineWidth = Math.min(lineWidth, Math.max(lineWidth/window.ZOOM/scale, 1));
+		lineWidth = Math.min(lineWidth, Math.max(lineWidth/window.ZOOM/currentSceneScale, 1));
 		if (displayWalls) {
 				
 			if(!editingWallPoints && ((wallBottom != undefined && wallBottom != '') || (wallTop != undefined && wallTop != ''))){
@@ -2382,7 +2433,7 @@ function redraw_light_walls(clear=true, editingWallPoints = false){
 										(doors[0][11] != undefined ? doors[0][11] : "")
 							];	
 							window.DRAWINGS.push(data);
-							window.wallUndo.push({
+							pushWallUndo({
 								undo: [[...data]],
 								redo: [[...doors[0]]]
 							})
@@ -2847,14 +2898,17 @@ function open_close_door(x1, y1, x2, y2, type=0){
 				 (doors[0][11] != undefined ? doors[0][11] : "")
 				];	
 	window.DRAWINGS.push(data);
-	window.wallUndo.push({
+	pushWallUndo({
 		undo: [[...data]],
 		redo: [[...doors[0]]]
 	})
-	redraw_light_walls();
-	redraw_drawn_light();
+	redraw_light_walls({wallsChanged: true});
+	redraw_drawn_light(); // could limit this to point line of sight tool drawings
+	redraw_drawings(); // could limit this to point line of sight tool drawings
+	redraw_fog(); // could limit this to point line of sight tool drawings
+	redraw_elev(); // could limit this to point line of sight tool drawings
 	debounceLightChecks();
-	sync_drawings();						
+	sync_drawings({wallsChanged: true});						
 }
 
 function stop_drawing() {
@@ -2870,6 +2924,8 @@ function stop_drawing() {
 	window.wallToStore = [];
 	window.selectedWalls = [];
 	window.wallsBeingDragged = [];
+	window.BEGIN_MOUSEX = undefined;
+	window.BEGIN_MOUSEY = undefined;
 }
 
 /**
@@ -2934,7 +2990,7 @@ function get_event_cursor_position(event, preventSnap = false) {
 		    window.DRAWSHAPE === 'line' ||
 			window.DRAWSHAPE === '3pointRect' ||
 			window.DRAWSHAPE === 'rect') &&
-	    $('#snap_walls').hasClass('button-enabled')
+	    window.SNAP_WALLS === true
     ) {
 	    return wall_snap(pointX, pointY);
     }
@@ -2974,6 +3030,11 @@ const [wall_snap, clear_wall_snap] = function () {
 			const adjustedScale =  walls[i][8]/adjustScale;
 			ret.push([walls[i][3]/adjustedScale,walls[i][4]/adjustedScale]);
 			ret.push([walls[i][5]/adjustedScale,walls[i][6]/adjustedScale]);		
+		}
+		// also snap to walls being drawn with shift or right click
+		for(let i=0; i<window.StoredWalls.length; i++){
+			ret.push([window.StoredWalls[i][0],window.StoredWalls[i][1]]);
+			ret.push([window.StoredWalls[i][2],window.StoredWalls[i][3]]);		
 		}
 		return ret;
 	}
@@ -3035,7 +3096,7 @@ function drawing_mousedown(e) {
 	window.DRAWLOCATION = data.location
 	window.DRAWSHAPE = window.drawAudioPolygon || window.drawTokenWallPolygon ? 'polygon' : data.shape;
 	window.DRAWFUNCTION = window.drawAudioPolygon ? 'audio-polygon' : window.drawTokenWallPolygon ? 'token-wall-polygon' : data.function;
-
+	window.SNAP_WALLS = Boolean(data.snap_walls);
 	//these are used with walls or elevation tool
 	window.wallTop = data.wall_top_height;
 	window.wallBottom = data.wall_base_height;
@@ -3246,7 +3307,7 @@ function drawing_mousedown(e) {
 				window.BEGIN_MOUSEY.push(pointY);
 				save3PointRect(e);
 				if(window.DRAWFUNCTION == 'wall')
-					redraw_light_walls(false);
+					redraw_light_walls({clearCanvas: false});
 				return;
 			} else {
 				window.BEGIN_MOUSEX.push(pointX);
@@ -3275,7 +3336,7 @@ function drawing_mousedown(e) {
 				window.BEGIN_MOUSEY.push(pointY);
 				save3PointRound(e);
 				if(window.DRAWFUNCTION == 'wall')
-					redraw_light_walls(false);
+					redraw_light_walls({clearCanvas: false});
 				return;
 			} else {
 				window.BEGIN_MOUSEX.push(pointX);
@@ -3486,11 +3547,7 @@ function drawing_mousemove(e) {
 
 					}
 				}
-	
-
-				
-				
-				redraw_light_walls(true, true);
+				redraw_light_walls({editingWallPoints: true});
 			}
 			else{
 				if (window.DRAWFUNCTION === "select" && e.button == 0){
@@ -4004,7 +4061,7 @@ function drawing_mouseup(e) {
 				 window.wallTop];
 			window.DRAWINGS.push(line4);
 
-			window.wallUndo.push({
+			pushWallUndo({
 				undo: [[...line1], [...line2], [...line3], [...line4]]
 			});
 		}
@@ -4033,12 +4090,12 @@ function drawing_mouseup(e) {
 						window.wallBottom,
 				 		window.wallTop];
 					window.DRAWINGS.push(data);
-					window.wallUndo.push({
+					pushWallUndo({
 						undo: [[...data]]
 					});
 			}
 			if(undoArray.length > 0){
-				window.wallUndo.push({
+				pushWallUndo({
 					undo: [...undoArray]
 				});
 			}
@@ -4046,13 +4103,14 @@ function drawing_mouseup(e) {
 			window.StoredWalls = [];
 			window.wallToStore = [];
 			window.MOUSEDOWN = false;
-			redraw_light_walls();
+			redraw_light_walls({wallsChanged:true});
 			redraw_light();
+			redraw_fog(); // could limit this to point line of sight tool drawings
 		}
 		redraw_elev();
 		redraw_drawn_light();
 		redraw_drawings();
-		sync_drawings();
+		sync_drawings({wallsChanged:window.DRAWFUNCTION == "wall" || window.DRAWFUNCTION == 'wall-door'});
 	}
 	else if (window.DRAWFUNCTION === "eraser"){
 		if (window.DRAWSHAPE === "rect"){
@@ -4446,15 +4504,18 @@ function drawing_mouseup(e) {
 				undoArray.push([...data]);
 			}					
 		}
- 		window.wallUndo.push({
+ 		pushWallUndo({
 			undo: [...undoArray],
 			redo: [...redoArray]
 		});
 
-		redraw_light_walls();
-        redraw_drawn_light();
+		redraw_light_walls({wallsChanged: true});
+       	redraw_drawn_light(); // could limit this to point line of sight tool drawings
+		redraw_drawings(); // could limit this to point line of sight tool drawings
+		redraw_fog(); // could limit this to point line of sight tool drawings
+		redraw_elev(); // could limit this to point line of sight tool drawings
         redraw_light();
-		sync_drawings();
+		sync_drawings({wallsChanged: true});
 	}
 	else if(window.DRAWFUNCTION === "wall-edit"){
 		if(window.DraggingWallPoints == undefined || window.DraggingWallPoints == false){
@@ -4574,13 +4635,16 @@ function drawing_mouseup(e) {
 				undoArray.push([...window.DRAWINGS[index]])
 				window.selectedWalls[i].wall = [...window.DRAWINGS[index]];	
 			}	
-			window.wallUndo.push({undo: [...undoArray], redo:[...redoArray], selectedWalls: originalSelected});
+			pushWallUndo({undo: [...undoArray], redo:[...redoArray], selectedWalls: originalSelected});
 		}
 
-      	redraw_light_walls();
-        redraw_drawn_light();
+      	redraw_light_walls({wallsChanged: true});
+        redraw_drawn_light(); // could limit this to point line of sight tool drawings
+		redraw_drawings(); // could limit this to point line of sight tool drawings
+		redraw_fog(); // could limit this to point line of sight tool drawings
+		redraw_elev(); // could limit this to point line of sight tool drawings
         redraw_light(true);
-		sync_drawings();
+		sync_drawings({wallsChanged: true});
 		window.MB.sendMessage("custom/myVTT/forceRedrawLight");
 		window.wallsBeingDragged = [];
 	
@@ -4617,7 +4681,7 @@ function drawing_mouseup(e) {
 			const isCircle = curr.options.tokenStyleSelect == 'circle'
 			const size = curr.options.size * ((isCircle || curr.options.tokenStyleSelect == 'square' || $("#tokens>div[data-id='" + id + "']").hasClass("isAoe")) ? (curr.options.imageSize || 1) : 1);
 			const R = (isCircle ? 0 : curr.options.rotation) || 0;
-			curr.selected = (fullyInside ? isRotatedSquareInsideRect : intersectsRotatedSquare) (
+			curr.selected = (shiftHeld && curr.selected == true) || (fullyInside ? isRotatedSquareInsideRect : intersectsRotatedSquare) (
 				{x:x0, y:y0, width:x1-x0, height: y1-y0}, CX, CY, size, R);
 		}
 		$("#temp_overlay").css('z-index', '25');
@@ -4677,6 +4741,30 @@ function drawing_contextmenu(e) {
 				window.DRAWCOLOR,
 				window.DRAWTYPE === "fill" || window.DRAWTYPE === "light",
 				1,
+				Math.round(((mousePosition.pageX - window.VTTMargin) * (1.0 / window.ZOOM))),
+				Math.round(((mousePosition.pageY - window.VTTMargin) * (1.0 / window.ZOOM)))
+			);
+		}
+		else{
+			// cancel polygon if on last point
+			clear_temp_canvas();
+		}
+	}
+	else if (window.DRAWSHAPE === "3pointRound") {
+		window.BEGIN_MOUSEX.pop();
+		window.BEGIN_MOUSEY.pop();
+		if(window.BEGIN_MOUSEX.length > 0){
+			let canvas = document.getElementById("temp_overlay");
+			let ctx = canvas.getContext("2d");
+			clear_temp_canvas();
+			draw3PointRound(
+				ctx,
+				joinPointsArray(
+					window.BEGIN_MOUSEX,
+					window.BEGIN_MOUSEY
+				),
+				window.DRAWCOLOR,
+				window.LINEWIDTH,
 				Math.round(((mousePosition.pageX - window.VTTMargin) * (1.0 / window.ZOOM))),
 				Math.round(((mousePosition.pageY - window.VTTMargin) * (1.0 / window.ZOOM)))
 			);
@@ -4903,8 +4991,8 @@ function handle_drawing_button_click() {
 		stop_drawing();
 		if(window.CURRENT_SCENE_DATA != undefined){
 			if($('#show_walls').hasClass('button-enabled') || $(clicked).is("#wall_button") || $("#wall_button").hasClass('ddbc-tab-options__header-heading--is-active')  || $('.top_menu.visible [data-shape="paint-bucket"]').hasClass('button-enabled')){
-				redraw_light_walls();
-				$('.hiddenDoor').css('display', 'block');	
+				redraw_light_walls(); 
+				$('.hiddenDoor').css('display', 'block');
 				$(`[id*='wallHeight']`).css('display', 'block');
 			}
 			else{
@@ -5296,9 +5384,10 @@ function draw3PointRound(ctx, points, style, lineWidth,
 	const ret = [];
 	const pts = (mouseX !== null && mouseY !== null) ? [...points, {x: mouseX, y: mouseY}] : points
 	if(pts.length < 2) return ret;
-	const radius = Math.sqrt(Math.pow(pts[0].x - pts[1].x, 2) + Math.pow(pts[0].y - pts[1].y, 2));
-	const startAngle = Math.atan2(pts[0].y - pts[1].y, pts[0].x - pts[1].x);
-	let endAngle = pts.length < 3 ? (startAngle - 2 * Math.PI) : Math.atan2(pts[2].y - pts[1].y, pts[2].x - pts[1].x);
+	const pt1 = {x:(pts[1].x + pts[0].x)/2, y:(pts[1].y + pts[0].y)/2}
+	const radius = Math.sqrt(Math.pow(pts[0].x - pts[1].x, 2) + Math.pow(pts[0].y - pts[1].y, 2))/2;
+	const startAngle = Math.atan2(pts[0].y - pt1.y, pts[0].x - pt1.x);
+	let endAngle = pts.length < 3 ? (startAngle - 2 * Math.PI) : Math.atan2(pts[2].y - pt1.y, pts[2].x - pt1.x);
 	while(endAngle <= startAngle) {
 		endAngle += 2 * Math.PI;
 	}
@@ -5315,8 +5404,8 @@ function draw3PointRound(ctx, points, style, lineWidth,
 	const segments = Math.min(density, Math.ceil(density * ((endAngle - startAngle) / (2 * Math.PI))));
 	for (let i = 0; i <= segments; i++) {
 		const currentAngle = startAngle + (endAngle - startAngle) * (i / segments);
-		const x = (pts[1].x + radius * Math.cos(currentAngle));
-		const y = (pts[1].y + radius * Math.sin(currentAngle));
+		const x = (pt1.x + radius * Math.cos(currentAngle));
+		const y = (pt1.y + radius * Math.sin(currentAngle));
 		if(ctx) {
 			ctx[ i === 0 ? "moveTo" : "lineTo"](x / scale, y / scale);
 		} else {
@@ -5553,14 +5642,17 @@ function save3PointRect(e){
 			undoArray.push([...data]);
 		}
 
-		window.wallUndo.push({
+		pushWallUndo({
 			undo: [...undoArray]
 		});
-			
+
 
 		window.MOUSEDOWN = false;
-		redraw_light_walls();
-        redraw_drawn_light();
+		redraw_light_walls({wallsChanged: true});
+        redraw_drawn_light(); // could limit this to point line of sight tool drawings
+		redraw_drawings(); // could limit this to point line of sight tool drawings
+		redraw_fog(); // could limit this to point line of sight tool drawings
+		redraw_elev(); // could limit this to point line of sight tool drawings
         redraw_light();
 	}
 	else if(window.DRAWFUNCTION === "elev"){
@@ -5601,7 +5693,7 @@ function save3PointRect(e){
 	clear_temp_canvas()
 
 	if (window.DRAWFUNCTION === "draw" || window.DRAWFUNCTION === "wall" || window.DRAWFUNCTION === 'elev') {
-		sync_drawings();
+		sync_drawings({wallsChanged: window.DRAWFUNCTION === "wall"});
 	} else {
 		sync_fog();
 	}
@@ -5629,15 +5721,18 @@ function save3PointRound(e){  //only used for wall currently
 		window.DRAWINGS.push(l);
 		undoArray.push(l);
 	}
-	window.wallUndo.push({
+	pushWallUndo({
 		undo: [...undoArray]
 	});
 	window.MOUSEDOWN = false;
-	redraw_light_walls();
-        redraw_drawn_light();
-        redraw_light();
+	redraw_light_walls({wallsChanged: true});
+	redraw_drawn_light(); // could limit this to point line of sight tool drawings
+	redraw_drawings(); // could limit this to point line of sight tool drawings
+	redraw_fog(); // could limit this to point line of sight tool drawings
+	redraw_elev(); // could limit this to point line of sight tool drawings
+	redraw_light();
 	clear_temp_canvas()
-	sync_drawings();
+	sync_drawings({wallsChanged: true});
 	window.BEGIN_MOUSEX = [];
 	window.BEGIN_MOUSEY = [];
 }
@@ -6255,7 +6350,7 @@ function init_draw_menu(buttons){
         	window.playerDrawUndo.splice(window.playerDrawUndo.length-1, 1)
 		    redraw_drawn_light();
             redraw_drawings()
-			sync_drawings(false)
+			sync_drawings({newDraw: false})
         }
         else{
 	        while (currentElement--) {
@@ -6263,7 +6358,7 @@ function init_draw_menu(buttons){
 	                window.DRAWINGS.splice(currentElement, 1)
 	                redraw_drawn_light();
 	                redraw_drawings()
-					sync_drawings()
+					sync_drawings({newDraw: false})
 	                break
 	            }
 	        }
@@ -6325,21 +6420,21 @@ function init_walls_menu(buttons){
 				 	Height Convert
 			</button>
 		</div>`);
-	wall_menu.append("<div class='wall-input menu-subtitle'>Wall Base</div>");
-	const wallBaseDesc = `Sets the elevation of the base of the wall. 
+			const wallBaseDesc = `Sets the elevation of the base of the wall. 
 Any token with elevation below this height will be able to see under the wall.
 When left blank it is treated as negative infinity, preventing tokens from seeing under the wall.`
+	wall_menu.append(`<div class='wall-input menu-subtitle' data-desc='${wallBaseDesc}'>Wall Base</div>`);
 	wall_menu.append(
-		`<div data-desc="${wallBaseDesc}">
+		`<div>
 			<input id='wall_base_height' type='number' step='5' data-required="wall_base_height" style='width:90%'
 			value='' >
 		</div>`);
 	const wallTopDesc = `Sets the elevation of the top of the wall. 
 Any token with elevation above this height will be able to see over the wall.
 When left blank it is treated as infinity, preventing tokens from seeing over the wall.`		
-	wall_menu.append("<div class='wall-input menu-subtitle'>Wall Top</div>");
+	wall_menu.append(`<div class='wall-input menu-subtitle' data-desc='${wallTopDesc}'>Wall Top</div>`);
 	wall_menu.append(
-		`<div data-desc="${wallTopDesc}">
+		`<div>
 			<input id='wall_top_height' type='number' step='5' data-required="wall_top_height" style='width:90%'
 			value=''>
 		</div>`);
@@ -6381,7 +6476,7 @@ When left blank it is treated as infinity, preventing tokens from seeing over th
 	const snapDesc = `Toggle to snap wall drawing to other nearby wall end points. This overrides grid snapping if enabled.`	
 	wall_menu.append(
 		`<div class='ddbc-tab-options--layout-pill menu-option' data-desc="${snapDesc}">
-			<button id='snap_walls' data-toggle='true' class='drawbutton menu-option ddbc-tab-options__header-heading ${(window.snapWallsToggle) ? "button-enabled" : ''}'>
+			<button id='snap_walls' data-key="snap_walls" data-value="true" data-toggle='true' class='drawbutton menu-option ddbc-tab-options__header-heading ${(window.snapWallsToggle) ? "button-enabled" : ''}'>
 				Join Snap
 			</button>
 		</div>`);
@@ -6405,7 +6500,7 @@ Example usage:
 		`<div class='ddbc-tab-options--layout-pill menu-option' data-desc="${hiddenIconsDesc}">
 			<button id='draw_door_hidden' class='drawbutton menu-option  ddbc-tab-options__header-heading'
 				data-key="hidden_icon" data-toggle="true" data-value="true">
-				 	Hidden Icon
+				 	Hidden Icons
 			</button>
 		</div>`);
 	const editWallDesc = `Select wall points to edit. Once selected you can drag to move them or shift+drag to scale them.`
@@ -6463,10 +6558,13 @@ Example usage:
 					window.TOKEN_OBJECTS[token].delete(true);
 				}
 			}
-			redraw_light_walls();
-			redraw_drawn_light();
+			redraw_light_walls({wallsChanged: true});
+			redraw_drawn_light(); // could limit this to point line of sight tool drawings
+			redraw_drawings(); // could limit this to point line of sight tool drawings
+			redraw_fog(); // could limit this to point line of sight tool drawings
+			redraw_elev(); // could limit this to point line of sight tool drawings
 			redraw_light();
-			sync_drawings();
+			sync_drawings({wallsChanged: true});
 		}
 	});
 	wall_menu.find("#wall_undo").click(function() {
@@ -6497,10 +6595,13 @@ Example usage:
 	        if(wallUndo.selectedWalls != undefined){
 	        	window.selectedWalls = [...wallUndo.selectedWalls]
 	        }
-          	redraw_light_walls();
-	        redraw_drawn_light();
+          	redraw_light_walls({wallsChanged: true});
+	        redraw_drawn_light(); // could limit this to point line of sight tool drawings
+			redraw_drawings(); // could limit this to point line of sight tool drawings
+			redraw_fog(); // could limit this to point line of sight tool drawings
+			redraw_elev(); // could limit this to point line of sight tool drawings
 	        redraw_light();
-			sync_drawings();
+			sync_drawings({wallsChanged: true});
         }   
 	});
 
@@ -6606,7 +6707,7 @@ function init_elev_menu(buttons){
             if (window.DRAWINGS[currentElement][1] == 'elev'){
                 window.DRAWINGS.splice(currentElement, 1)
                 redraw_elev();
-                redraw_light_walls();
+                redraw_light_walls(); 
 		        redraw_drawn_light();
 		        redraw_light();
 				sync_drawings()
@@ -7403,6 +7504,7 @@ function particleLook(ctx, walls, lightRadius=100000, fog=false, fogStyle, fogTy
 	const particlePosY = window.PARTICLE.pos.y;
 
 	const wallCache = [];
+	const wallThickness = 4; // stops doors and other objects close to walls from being visible if there is light behind them
 	for (let j = 0; j < walls.length; j++) {
 		const currWall = walls[j];
 		let wallTop = currWall.wallTop !== undefined && currWall.wallTop !== '' ? parseInt(currWall.wallTop) : Infinity;
@@ -7413,8 +7515,7 @@ function particleLook(ctx, walls, lightRadius=100000, fog=false, fogStyle, fogTy
 		const isDarkness = currWall.darkness === true;
 		const doorId = tokenIsDoor ? `${currWall.a.x}${currWall.a.y}${currWall.b.x}${currWall.b.y}${sceneId}`.replaceAll('.', '') : '';
 
-		wallCache.push({
-			wall: currWall,
+		const wallOptions = {
 			wallTop: wallTop,
 			wallBottom: wallBottom,
 			blocksVision: blocksVision,
@@ -7423,7 +7524,48 @@ function particleLook(ctx, walls, lightRadius=100000, fog=false, fogStyle, fogTy
 			isDarkness: isDarkness,
 			doorId: doorId,
 			tokenId: currWall.tokenId
-		});
+		}
+		if(currWall.radius !== undefined){
+			wallCache.push({
+				wall: { ...currWall, radius: currWall.radius+(wallThickness/2) },
+				...wallOptions
+			})
+			wallCache.push({
+				wall: { ...currWall, radius: currWall.radius-(wallThickness/2) },
+				...wallOptions
+			});
+		}else{
+			/*create 4 walls to emulate wall thickness here*/
+			let dirX = currWall.b.x - currWall.a.x;
+			let dirY = currWall.b.y - currWall.a.y;
+			let len = Math.sqrt(dirX * dirX + dirY * dirY);	
+
+			let perpX = -dirY / len * wallThickness / 2;
+			let perpY = dirX / len * wallThickness / 2;
+
+			let leftA = { x: currWall.a.x + perpX, y: currWall.a.y + perpY };
+			let leftB = { x: currWall.b.x + perpX, y: currWall.b.y + perpY };
+			let rightA = { x: currWall.a.x - perpX, y: currWall.a.y - perpY };
+			let rightB = { x: currWall.b.x - perpX, y: currWall.b.y - perpY };
+
+			wallCache.push({
+				wall: { ...currWall, a: leftA, b: leftB },
+				...wallOptions
+			})
+			wallCache.push({
+				wall: { ...currWall, a: rightA, b: rightB },
+				...wallOptions
+			});
+			wallCache.push({
+				wall: { ...currWall, a: leftA, b: rightA },
+				...wallOptions
+			});
+			wallCache.push({
+				wall: { ...currWall, a: leftB, b: rightB },
+				...wallOptions
+			});
+		}
+		
 	}
 	
 
@@ -7681,55 +7823,14 @@ function particleLook(ctx, walls, lightRadius=100000, fog=false, fogStyle, fogTy
 	   
 
 	}
-  	if(draw === true){
-		if(!fog){
-			  drawPolygon(ctx, lightPolygon, 'rgba(255, 255, 255, 1)', true);
-		}
-		else{	
-			if(fogType === 0){
-				clearPolygon(ctx, lightPolygon);
-			}
-			else{
-				if(!islight){
-					clearPolygon(ctx, lightPolygon, undefined, true);
-					drawPolygon(ctx, lightPolygon, fogStyle, undefined, undefined, undefined, undefined, undefined, true);
-				}
-				else {
-					
-					if(auraId !== undefined){
-						const canvasWidth = getSceneMapSize().sceneWidth;
-						const canvasHeight = getSceneMapSize().sceneHeight;
-
-
-						const isBlur = parseInt(blur) > 0;
-						combineCtx = window.offScreenCombineContext;
-						combineCtx.clearRect(0, 0, canvasWidth, canvasHeight);
-						combineCtx.globalCompositeOperation = "source-over";
-
-
-						combineCtx.filter = isBlur ? `blur(${parseInt(blur)}px)` : `none`;
-						drawPolygon(combineCtx, lightPolygon, fogStyle, true);
-
-						if (isBlur) {
-							combineCtx.filter = `none`;
-							combineCtx.globalCompositeOperation = "destination-in";
-							drawPolygon(combineCtx, lightPolygon, "#000", true);
-						}
-
-						combineCtx.globalCompositeOperation = "destination-out";
-						drawPolygon(combineCtx, lightPolygon, "#000", false, 10);
-						ctx.save();
-						ctx.globalCompositeOperation = 'lighten';
-						ctx.drawImage(window.offScreenCombine, 0, 0);
-						ctx.restore();
-						return;
-					}
-					ctx.filter = `none`;
-					ctx.globalCompositeOperation = "destination-in";
-					drawPolygon(ctx, lightPolygon, "#000", true);
-				}	
-			}
-		}
+  	if(draw === true){	
+		//used for fog and other non-light drawings only now
+		if(fogType === 0){
+			clearPolygon(ctx, lightPolygon);
+		} else{
+			clearPolygon(ctx, lightPolygon, undefined, true);
+			drawPolygon(ctx, lightPolygon, fogStyle, undefined, undefined, undefined, undefined, undefined, true);
+		}	
 	} 	
 	
 	window.lightPolygon = lightPolygon;
@@ -7796,8 +7897,24 @@ function detectInLos(x, y) {
 	}
 	return true;
 }
-	
+/*This is used to clip light circles, if we want to allow clipping in other drawings places we'll have to add a drawn scale similar to drawPolygon*/
+function clip_circle_with_polygon(ctx, x, y, radius, color, polygon) {
+	ctx.save();
 
+	ctx.beginPath();
+	let adjustScale = window.CURRENT_SCENE_DATA.scale_factor;
+
+	ctx.moveTo(polygon[0].x/adjustScale, polygon[0].y/adjustScale);
+	for (let i = 1; i < polygon.length; i++) {
+		const p = polygon[i];
+		ctx.lineTo(p.x/adjustScale, p.y/adjustScale);
+	}
+	ctx.closePath();
+	ctx.clip();
+	drawCircle(ctx, x, y, radius, color);
+
+	ctx.restore();
+}
 
 function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 	const canvasWidth = getSceneMapSize().sceneWidth;
@@ -7819,9 +7936,6 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 	if(window.PARTICLE == undefined){
 		initParticle(new Vector(200, 200), 1);
 	}
-
-
-	const combineCtx = window.offScreenCombine.getContext("2d");
 
 
 	const offscreenCanvasMask = window.offscreenCanvasMask;
@@ -7949,7 +8063,7 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 				.map(p => `${p.x / adjustScale}px ${p.y / adjustScale}px`)
 				.join(', ');
 
-		
+
 
 			window.lineOfSightPolygons[auraId] = {
 				polygon: window.lightPolygon,
@@ -7979,6 +8093,7 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 				window.lightAuraClipPolygon = {};
 			}
 			clipped_light(auraId, window.lightPolygon, playerTokenId, canvasWidth, canvasHeight, darknessBoundarys, selectedIds.length);
+
 		}
 
 		let drawDarkVision = false;
@@ -7991,28 +8106,12 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 			if (!hideVisionWhenNoPlayerToken && !hideVisionWhenPlayerTokenExists) {
 				//when player token does not exist show vision for all pc tokens and shared vision for other tokens. Mostly used by DM's, streams and tabletop tv games.
 				//when player token does exist show your own vision and shared vision.
-				if (window.DM !== true || window.SelectedTokenVision === true) {
-
-					if (window.lightAuraClipPolygon[auraId] != undefined && (window.TOKEN_OBJECTS[auraId].options.sight === 'devilsight' || window.TOKEN_OBJECTS[auraId].options.sight === 'truesight')) {
-						combineCtx.clearRect(0, 0, canvasWidth, canvasHeight);
-						combineCtx.globalCompositeOperation = 'source-over';
-						drawCircle(combineCtx, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].darkvision, window.lightAuraClipPolygon[auraId].vision.color)
-						combineCtx.globalCompositeOperation = 'destination-in';
-						drawPolygon(combineCtx, window.noDarknessPolygon, 'rgba(255, 255, 255, 1)', true);
-						combineCtx.globalCompositeOperation = "destination-out";
-						drawPolygon(combineCtx, window.lightPolygon, "#000", false, 10);
-						offscreenContext.globalCompositeOperation = 'source-over';
-						offscreenContext.drawImage(offScreenCombine, 0, 0)
-					}
-					if (window.TOKEN_OBJECTS[auraId].options.sight === 'devilsight') {
-						devilsightCanvasContext.globalCompositeOperation = 'source-over';
-						devilsightCanvasContext.drawImage(offScreenCombine, 0, 0);
-					}
+				
+				if (window.noDarknessPolygon?.length>1 && (window.DM !== true || window.SelectedTokenVision === true) && (window.TOKEN_OBJECTS[auraId].options.sight === 'truesight' || window.TOKEN_OBJECTS[auraId].options.sight === 'devilsight')) {					
+					clip_circle_with_polygon(devilsightCanvasContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].darkvision, '#fff', window.noDarknessPolygon)
 					if (window.TOKEN_OBJECTS[auraId].options.sight === 'truesight') {
-						truesightCanvasContext.globalCompositeOperation = 'source-over';
-						truesightCanvasContext.drawImage(offScreenCombine, 0, 0);
+						clip_circle_with_polygon(truesightCanvasContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].darkvision, '#fff', window.noDarknessPolygon)
 					}
-
 				}
 
 				if (window.lightAuraClipPolygon[auraId]?.darkvision !== undefined) {
@@ -8020,30 +8119,24 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 				}
 
 				$(`.aura-element-container-clip[id='${auraId}'] [id*='vision_']`).toggleClass('notVisible', false);
-				offscreenContext.globalCompositeOperation = "lighten";
+			
 				drawPolygon(offscreenContext, window.lightPolygon, 'rgba(255, 255, 255, 1)', true, 6, undefined, undefined, undefined, true, true); //draw to offscreen canvas so we don't have to render every draw and use this for a mask	
 				drawPolygon(moveOffscreenCanvasMaskContext, window.movePolygon, 'rgba(255, 255, 255, 1)', true, 6, undefined, undefined, undefined, true, true); //draw to offscreen canvas so we don't have to render every draw and use this for a mask
-
 			}
 		}
 		if (drawDarkVision || window.lightAuraClipPolygon[auraId]?.light !== undefined) {
-			combineCtx.clearRect(0, 0, canvasWidth, canvasHeight);
-			combineCtx.globalCompositeOperation = 'lighten';
+			lightInLosContext.globalCompositeOperation='lighten';
 			if (window.lightAuraClipPolygon[auraId]?.light !== undefined) {
-				drawCircle(combineCtx, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].light2.range, window.lightAuraClipPolygon[auraId].light2.color)
-				drawCircle(combineCtx, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].light1.range, window.lightAuraClipPolygon[auraId].light1.color)
+				clip_circle_with_polygon(lightInLosContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].light2.range, window.lightAuraClipPolygon[auraId].light2.color, window.lightPolygon);
+				clip_circle_with_polygon(lightInLosContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].light1.range, window.lightAuraClipPolygon[auraId].light1.color, window.lightPolygon);
 			}
 			if(drawDarkVision){
-				drawCircle(combineCtx, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].darkvision, window.lightAuraClipPolygon[auraId].vision.color);
+				clip_circle_with_polygon(lightInLosContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].darkvision, window.lightAuraClipPolygon[auraId].vision.color, window.lightPolygon);
 			}
-			combineCtx.globalCompositeOperation = 'destination-in';
-			drawPolygon(combineCtx, window.lightPolygon, "#FFF", true);
-			combineCtx.globalCompositeOperation = "destination-out";
-			drawPolygon(combineCtx, window.lightPolygon, "#000", false, 10);		
-			lightInLosContext.globalCompositeOperation = "lighten";
-			lightInLosContext.drawImage(offScreenCombine, 0, 0);
 		}
 	}
+	offscreenContext.globalCompositeOperation = "source-over";
+	offscreenContext.drawImage(devilsightCanvas, 0, 0);
 
 	const tokenObjectValues = Object.values(window.TOKEN_OBJECTS);
 	const aPlayerTokenExists = tokenObjectValues.some(d => d.options.id.startsWith('/profile'))
@@ -8071,9 +8164,6 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 	
 			lightInLosContext.globalCompositeOperation='source-over';	
 			lightInLosContext.drawImage(devilsightCanvas, 0, 0);		
-
-			truesightCanvasContext.globalCompositeOperation='destination-in';
-			truesightCanvasContext.drawImage(offscreenCanvasMask, 0, 0);
 		}
 	}
 	if(window.CURRENT_SCENE_DATA.darkness_filter != 0){
@@ -8085,10 +8175,6 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 
 			lightInLosContext.globalCompositeOperation='source-over';
 			lightInLosContext.drawImage(devilsightCanvas, 0, 0);
-
-			
-			truesightCanvasContext.globalCompositeOperation='destination-in';
-			truesightCanvasContext.drawImage(offscreenCanvasMask, 0, 0);	
 		}
 		
 		lightInLosContext.globalCompositeOperation='destination-in';
