@@ -1079,10 +1079,9 @@ class MessageBroker {
 				redraw_text();
 				redraw_drawn_light();
 				redraw_light();
-			} else
 				if(wallsChanged)
 					redraw_fog();// for point line of sight fog tool that is line of sight bucket fill stopped by walls
-			}
+			} else
 			if(msg.eventType=="custom/myVTT/forceRedrawLight"){
 				redraw_light(true);
 			} else
