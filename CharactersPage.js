@@ -3174,7 +3174,7 @@ function set_window_name_and_image(callback) {
     window.PLAYER_IMG = get_higher_res_url($(".ddbc-character-avatar__portrait").css("background-image").slice(4, -1).replace(/"/g, "")) || get_higher_res_url($(".ddbc-character-avatar__portrait").attr('src')) || defaultAvatarUrl;
   } catch {}
 
-  if (typeof window.PLAYER_NAME !== "string" || window.PLAYER_NAME.length <= 1 || typeof window.PLAYER_IMG !== "string" || window.PLAYER_IMG.length <= 1) {
+  if (typeof window.PLAYER_NAME !== "string" || window.PLAYER_NAME.length < 1 || typeof window.PLAYER_IMG !== "string" || window.PLAYER_IMG.length < 1) {
     // try again
     if (!window.set_window_name_and_image_attempts) {
       window.set_window_name_and_image_attempts = 1;

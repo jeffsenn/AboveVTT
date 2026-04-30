@@ -14818,6 +14818,68 @@ button#displayedDiceFormulaExit:hover {
     left: -195px !important;
 }
 
+.js-popup-options {
+    margin: 2px;
+}
+.js-popup-option {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    border: 1px;
+    flex-wrap: wrap;
+    font-family: Roboto Condensed,Roboto,Helvetica,sans-serif;
+    cursor: pointer;
+    color: #838383;
+    line-height: 1;
+    font-weight: 700;
+    font-size: 12px;
+    gap: 4px;    
+    text-transform: uppercase;
+    background-color: #f2f2f2;
+    border-radius: 3px;
+    padding: 5px 7px;
+    margin: 1px;
+    white-space: nowrap;
+    background-image: unset;
+}
+.js-popup-decoration {
+    width: 100%;
+    display: block;
+    font-family: Roboto Condensed,Roboto,Helvetica,sans-serif;
+    color: black; 
+    font-weight: bold;
+    font-size: 12px;
+    text-transform: uppercase;
+    background-color: #f2f2f2;
+    margin: 1px;
+    white-space: nowrap;
+    background-image: unset;
+    text-align: center;
+    padding: 0;
+    border: 0;
+    border-top: 1px solid #ccc;
+}
+.js-popup {
+    padding: 0;
+    z-index: 10000000;
+    position: absolute;
+    width: fit-content;
+    height: fit-content;
+    margin: 0;
+    border: none;
+}
+.js-popup form {
+    margin: 0px;
+    width: 120px;
+}
+.js-popup-option:hover {
+    color: #f2f2f2;
+    background-color: #5d5d5d;
+}
+.js-popup--is-active {
+    color: #fff;
+    background-color: #c53131;
+}
 
 
 @font-face {

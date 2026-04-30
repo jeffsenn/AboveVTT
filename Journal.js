@@ -1817,7 +1817,8 @@ class JournalManager{
 		note_container.attr("role", "dialog");
 		note_container.addClass(['ui-dialog', 'ui-corner-all', 'ui-widget', 'ui-widget-content', 'ui-front', 'ui-draggable', 'ui-resizable'])
 		note_container.find('.title_bar').off('dblclick.adjustClasses').on('dblclick.adjustClasses', function (event) {
-			note_container.toggleClass(['ui-dialog', 'ui-corner-all', 'ui-widget', 'ui-widget-content', 'ui-front', 'ui-draggable', 'ui-resizable']);
+			const isMinimized = $(this).hasClass('minimized');
+			note_container.toggleClass(['ui-dialog', 'ui-corner-all', 'ui-widget', 'ui-widget-content', 'ui-front', 'ui-draggable', 'ui-resizable'], !isMinimized);
 		});
 		if(!noteAlreadyOpen){
 			note.attr('title',self.notes[id].title);
@@ -1915,6 +1916,14 @@ class JournalManager{
 		let note_text= noteAlreadyOpen ? note.find('.note-text') : $("<div class='note-text'/>");
 		if(noteAlreadyOpen){
 			note_text.empty();
+			const titleBarMinimized = note_container.find('.title_bar.minimized');
+			if(titleBarMinimized.length>0){
+				titleBarMinimized.dblclick(); // if note is minimized open it
+			} else{
+				note_container.css('display', '') // if note is hidden for popout this will display it
+			}
+			
+
 		}
 		note_text.append(self.notes[id].text); // valid tags are controlled by tinyMCE.init()
 		this.translateHtmlAndBlocks(note_text, id).then(() => {	
@@ -2238,77 +2247,6 @@ class JournalManager{
 	block_send_to_buttons(target){
 		const blocks = target.find('img:not(.mon-stat-block__separator-img), .text--quote-box, .rules-text, .block-torn-paper, .read-aloud-text, .dmScreenChunk')
 
-		const sendToGamelogButton = $('<button class="block-send-to-game-log"><span class="material-symbols-outlined">login</span></button>')
-
-		
-	
-
-	    const whisper_container=$("<div class='whisper-container'/>");
-
-        for(let i=0; i<window.playerUsers.length; i++){
-			if(whisper_container.find(`input[name='${window.playerUsers[i].userId}']`).length == 0){
-				const randomId = uuid();
-				let whisper_toggle=$(`<input type='checkbox' name='${window.playerUsers[i].userId}'/>`);
-				let whisper_row = $(`<div class='whisper_toggle_row'><label>${window.playerUsers[i].userName}</label></div>`)
-				whisper_toggle.off('click.toggle').on('click.toggle', function(e){
-
-					e.stopPropagation();
-				})
-				whisper_row.find('label').off('click.stopProp').on('click.stopProp', function(e){
-					e.stopPropagation();
-					e.preventDefault();
-					$(this).next('input[type=checkbox]').click();
-				})
-				whisper_row.append(whisper_toggle)
-
-				
-				whisper_container.append(whisper_row);
-			}
-		}
-		sendToGamelogButton.off('contextmenu').on("contextmenu", function(e) {
-			e.preventDefault();
-			e.stopPropagation();
-			const checkedInputs=$(this).find('.whisper-container input:checked');
-	        checkedInputs.click();
-			$(this).find('.whisper-container').toggleClass('visible');
-
-			if($(this).find('.whisper-container').hasClass('visible')){
-		      $(document).on('click.blurWhisperHandle', function(e){
-		        if($(e.target).closest('.whisper-container').length == 0){
-		          $('.whisper-container').toggleClass('visible', false)
-		          $(document).off('click.blurWhisperHandle');
-		        }
-		      })  
-		    }
-		})
-		$(sendToGamelogButton).append(whisper_container);
-		sendToGamelogButton.off('click').on("click", function(e) {
-	        e.stopPropagation();
-	        e.preventDefault();
-	        
-	        let targetBlock = $(e.currentTarget).parent().clone();
-	        targetBlock.find('button.block-send-to-game-log').remove();
-	        targetBlock.find('img').removeAttr('width height style').toggleClass('magnify', true);
-	       	const whisper_container=$(this).find('.whisper-container');
-	        if(whisper_container.hasClass('visible')){
-	        	const checkedInputs = whisper_container.find('input:checked');
-	        	const whisperArray = [];
-	        	checkedInputs.each(function () {
-			       whisperArray.push($(this).attr('name'));
-			  	});
-			  	send_html_to_gamelog(`<p>${targetBlock[0].outerHTML}</p>`, whisperArray)
-	        }
-	        else{
-	        	send_html_to_gamelog(`<p>${targetBlock[0].outerHTML}</p>`);
-	        }
-	        
-	    });
-
-
-		const tables = target.find('table');
-		
-		const allDiceRegex = /(\d+)?d(?:100|20|12|10|8|6|4)((?:kh|kl|ro(<|<=|>|>=|=)|min=)\d+)*/g; // ([numbers]d[diceTypes]kh[numbers] or [numbers]d[diceTypes]kl[numbers]) or [numbers]d[diceTypes]
-       	
    		blocks.wrap(function(i){
 			const container = $(`<div class='note-text' style='position:relative;max-width: 100%;'></div>`)
 			if(blocks[i] instanceof HTMLImageElement){
@@ -2320,18 +2258,24 @@ class JournalManager{
 			}
 			return container;
 		});
-		sendToGamelogButton.clone(true, true).insertAfter(blocks);
+		blocks.each((i, block) => {
+			createSendPlayerButton(block, "login", block instanceof HTMLImageElement).insertAfter(block);			
+		});
+		//todo: decide if we like new method and cleanup this old one
+		//sendToGamelogButton.clone(true, true).insertAfter(blocks);
+
+		const tables = target.find('table');
+		const allDiceRegex = /(\d+)?d(?:100|20|12|10|8|6|4)((?:kh|kl|ro(<|<=|>|>=|=)|min=)\d+)*/g; // ([numbers]d[diceTypes]kh[numbers] or [numbers]d[diceTypes]kl[numbers]) or [numbers]d[diceTypes]
 		if(allDiceRegex.test($(tables).find('tr:first-of-type>:first-child').text())){
 			let result = $(tables).find(`tbody > tr td:last-of-type`);
 			$(tables).find('td').css({
 				'position': 'relative',
 				'padding-right': '10px'
 			});
-			result.append(sendToGamelogButton.clone(true, true)); 
+			//result.append(sendToGamelogButton.clone(true, true));
+			result.each((i, block) =>
+				block.append(createSendPlayerButton(block, "login")));
 		}
-
-
-		
 	}
 				   
 	replaceNoteEmbed(text, notesIncluded=[]){

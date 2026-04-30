@@ -746,8 +746,8 @@ class Token {
 			if (this.options.darkness){
 				let copyImage = $(`[data-darkness='darkness_${this.options.id}']`);
 				copyImage.css({
-					left: parseInt(parseFloat(this.options.left) / window.CURRENT_SCENE_DATA.scale_factor),
-					top: parseInt(parseFloat(this.options.top) / window.CURRENT_SCENE_DATA.scale_factor),
+					left: parseFloat(this.options.left) / window.CURRENT_SCENE_DATA.scale_factor,
+					top: parseFloat(this.options.top) / window.CURRENT_SCENE_DATA.scale_factor,
 					'--token-width': `calc(${this.sizeWidth()}px / var(--scene-scale))`,
 					'--token-height': `calc(${this.sizeHeight()}px / var(--scene-scale))`,
 					width: `var(--token-width)`,
@@ -767,11 +767,12 @@ class Token {
 			}
 			if(this.options.tokenStyleSelect == 'definitelyNotAToken' || this.options.underDarkness == true){
 				old.toggleClass('underDarkness', true);
+				let tokenClone;
 				if($(`[data-notatoken='notatoken_${this.options.id}']`).length == 0){
-					let tokenClone = old.clone();
+					tokenClone = old.clone();
 					tokenClone.css({
-						left: parseInt(parseFloat(this.options.left) / window.CURRENT_SCENE_DATA.scale_factor),
-						top: parseInt(parseFloat(this.options.top) / window.CURRENT_SCENE_DATA.scale_factor),
+						left: parseFloat(this.options.left) / window.CURRENT_SCENE_DATA.scale_factor,
+						top: parseFloat(this.options.top) / window.CURRENT_SCENE_DATA.scale_factor,
 						'--token-width': `calc(${this.sizeWidth()}px / var(--scene-scale))`,
 						'--token-height': `calc(${this.sizeHeight()}px / var(--scene-scale))`,
 						width: `var(--token-width)`,
@@ -800,10 +801,10 @@ class Token {
 			        $('#token_map_items').append(tokenClone);
 				}
 				else{
-					let copyToken = $(`[data-notatoken='notatoken_${this.options.id}']`);
-					copyToken.css({
-						left: parseInt(parseFloat(this.options.left) / window.CURRENT_SCENE_DATA.scale_factor),
-						top: parseInt(parseFloat(this.options.top) / window.CURRENT_SCENE_DATA.scale_factor),
+					tokenClone = $(`[data-notatoken='notatoken_${this.options.id}']`);
+					tokenClone.css({
+						left: parseFloat(this.options.left) / window.CURRENT_SCENE_DATA.scale_factor,
+						top: parseFloat(this.options.top) / window.CURRENT_SCENE_DATA.scale_factor,
 						'--token-width': `calc(${this.sizeWidth()}px / var(--scene-scale))`,
 						'--token-height': `calc(${this.sizeHeight()}px / var(--scene-scale))`,
 						width: `var(--token-width)`,
@@ -827,15 +828,17 @@ class Token {
 						'--max-width': `var(--underdarkness-max-width)`,
 						'--max-height': `var(--underdarkness-max-height)`
 					})
-					copyToken.children('div:not(.base):not(.token-image):not(.hpvisualbar):not(.dead)').remove()
-					copyToken.toggleClass('lockedToken', this.options.locked==true)
-					copyToken.toggleClass('declutterToken', this.options.lockRestrictDrop == "declutter")
-					copyToken.attr('data-name', old.attr('data-name'));
-					copyToken.toggleClass('hasTooltip', $(old).hasClass('hasTooltip'));
+					tokenClone.children('div:not(.base):not(.token-image):not(.hpvisualbar):not(.dead)').remove()
+					tokenClone.toggleClass('lockedToken', this.options.locked==true)
+					tokenClone.toggleClass('declutterToken', this.options.lockRestrictDrop == "declutter")
+					tokenClone.attr('data-name', old.attr('data-name'));
+					tokenClone.toggleClass('hasTooltip', $(old).hasClass('hasTooltip'));
 				}
+				if (window.ON_SCREEN_TOKENS[this.options.id] == undefined)
+					window.ON_SCREEN_TOKENS[this.options.id] = {};
+				window.ON_SCREEN_TOKENS[this.options.id].onScreenDarknessToken = tokenClone;
 
-
-
+                const copyImage = tokenClone.find('.token-image');
 
 				if(this.options.imgsrc.startsWith('above-bucket-not-a-url')){
 					const fileSrc = this.options.imgsrc.replace('above-bucket-not-a-url', '');
@@ -2620,8 +2623,8 @@ class Token {
 	    					'--token-flip-x': old.css('--token-flip-x')						
 					})
 					copyImage.animate({
-							left: parseInt(parseFloat(this.options.left) / window.CURRENT_SCENE_DATA.scale_factor),
-							top: parseInt(parseFloat(this.options.top) / window.CURRENT_SCENE_DATA.scale_factor),
+							left: parseFloat(this.options.left) / window.CURRENT_SCENE_DATA.scale_factor,
+							top: parseFloat(this.options.top) / window.CURRENT_SCENE_DATA.scale_factor,
 						}, 
 						{ 
 							duration: animationDuration, queue: true, complete: async function() {
@@ -2643,8 +2646,8 @@ class Token {
 						if($(`[data-notatoken='notatoken_${this.options.id}']`).length == 0){
 							let tokenClone = old.clone();
 							tokenClone.css({
-								left: parseInt(parseFloat(this.options.left) / window.CURRENT_SCENE_DATA.scale_factor),
-								top: parseInt(parseFloat(this.options.top) / window.CURRENT_SCENE_DATA.scale_factor),
+								left: parseFloat(this.options.left) / window.CURRENT_SCENE_DATA.scale_factor,
+								top: parseFloat(this.options.top) / window.CURRENT_SCENE_DATA.scale_factor,
 								'--token-width': `calc(${this.sizeWidth()}px / var(--scene-scale))`,
 								'--token-height': `calc(${this.sizeHeight()}px / var(--scene-scale))`,
 								width: `var(--token-width)`,
@@ -2705,8 +2708,8 @@ class Token {
 							copyToken.attr('data-name', old.attr('data-name'));
 							copyToken.toggleClass('hasTooltip', $(old).hasClass('hasTooltip'));
 							copyToken.animate({
-									left: parseInt(parseFloat(this.options.left) / window.CURRENT_SCENE_DATA.scale_factor),
-									top: parseInt(parseFloat(this.options.top) / window.CURRENT_SCENE_DATA.scale_factor),
+									left: parseFloat(this.options.left) / window.CURRENT_SCENE_DATA.scale_factor,
+									top: parseFloat(this.options.top) / window.CURRENT_SCENE_DATA.scale_factor,
 								}, 
 								{ 
 									duration: animationDuration, queue: true, complete: async function() {
@@ -3471,8 +3474,8 @@ class Token {
 					if($(`[data-notatoken='notatoken_${this.options.id}']`).length == 0){
 						let tokenClone = tok.clone();
 						tokenClone.css({
-							left: parseInt(parseFloat(this.options.left) / window.CURRENT_SCENE_DATA.scale_factor),
-							top: parseInt(parseFloat(this.options.top) / window.CURRENT_SCENE_DATA.scale_factor),
+							left: parseFloat(this.options.left) / window.CURRENT_SCENE_DATA.scale_factor,
+							top: parseFloat(this.options.top) / window.CURRENT_SCENE_DATA.scale_factor,
 							'--token-width': `calc(${this.sizeWidth()}px / var(--scene-scale))`,
 							'--token-height': `calc(${this.sizeHeight()}px / var(--scene-scale))`,
 							width: `var(--token-width)`,
