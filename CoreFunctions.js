@@ -217,17 +217,22 @@ function inject_chat_buttons() {
     return;
   }
   add_dice_stream_gamelog_button();
-  const chatTextWrapper = $(`<div class='chat-text-wrapper sidebar-hover-text' data-hover="Dice Rolling Format: /cmd diceNotation action  &#xa;
-    '/r 1d20'&#xa;
-    '/roll 1d4 punch:bludgeoning damage'&#xa;
-    '/hit 2d20kh1+2 longsword ADV'&#xa;
-    '/dmg 1d8-2 longsword:slashing'&#xa;
-    '/save 2d20kl1 DEX DISADV'&#xa;
-    '/skill 1d20+1d4 Thieves' Tools + Guidance'&#xa;
-    Advantage: 2d20kh1 (keep highest)&#xa;
-    Disadvantage: 2d20kl1 (keep lowest)&#xa;
-    '/w [playername] a whisper to playername'&#xa;
-    '/dm for a shortcut to whisper THE DM'&#xa;
+  const chatTextWrapper = $(`<div class='chat-text-wrapper sidebar-hover-text' data-hover="Dice Rolling Format: /cmd diceNotation action  
+    '/r 1d20'
+    '/roll 1d4 punch:bludgeoning damage'
+    '/hit 2d20kh1+2 longsword'
+    '/dmg 1d8-2 longsword:slashing'
+    '/save 2d20kl1 DEX'
+    '/skill 1d20+1d4 Thieves' Tools + Guidance'
+    '/heal 1d4+WIS Healing Word'
+Roll Modifiers:
+    Advantage: 2d20kh1 (keep highest)
+    Disadvantage: 2d20kl1 (keep lowest)
+    Min: 2d6min3 (minimum 3)
+    Reroll: 2d6ro<2 (reroll <2, Can also use = or <=)
+Other Commands:
+    '/w [playername] a whisper to playername'
+    '/dm for a shortcut to whisper THE DM'
     '/timer Timer Title 5:00' or '/timer 5:00'"><input id='chat-text' autocomplete="off" placeholder='Chat, /r 1d20+4..'></div>`
   );
   const diceRoller = $(`
@@ -686,7 +691,7 @@ function deleteDB(){
     objectStoreRequest.onsuccess = function(event) {       
       $('#exploredCanvas').remove();
       redraw_light();
-      alert('This campaigns local explored vision data has been cleared.')
+      showTempMessage('This campaigns local explored vision data has been cleared.')
     };
   }
 }
@@ -707,7 +712,7 @@ function deleteExploredScene(sceneId){
       if(sceneId == window.CURRENT_SCENE_DATA.id){
         $('#exploredCanvas').remove();
         redraw_light();
-        alert('Scene Explore Trail Data Cleared')
+        showTempMessage('Scene Explore Trail Data Cleared')
       }        
     };
 }
@@ -1687,35 +1692,84 @@ function convertMmSsToMs(text) {
 function convertMsToMmSs(duration) {
   return  `${`${Math.floor(duration / 60000)}`.padStart(2, '0')}:${`${Math.floor((duration % 60000) / 1000)}`.padStart(2, '0')}`
 }
-function create_gamelog_timer(message, duration = 60000, startTime = Date.now()){
-  let timerId;
-  const startTimeString = convertMsToMmSs(duration);
-  const timerBox = $(`<div class='chatTimer' data-start='${startTime}'><span class='timerMessage'>${message}</span><span class='timerBar'>${startTimeString}</span></div>`);
-  const closeButton = $(`<span class='timerCloseButton'>&#10006;</span>`);
-  closeButton.on('click', function(){
-    clearInterval(timerId);
-    timerBox.remove();
-  });
-  timerBox.append(closeButton);
-  $(".glc-game-log > [class*='-GameLog']").before(timerBox);
-  timerId = setInterval(function(){
-    const elapsed = Date.now() - startTime;
-    const remaining = duration - elapsed;
-    if(remaining <= 0){
-      clearInterval(timerId);
+function setTimerInterval(timerBox, startTime){
+  const intervalTime = 1000;
+  return setInterval(function(){
+    window.chatTimers[startTime].remaining -= intervalTime;
+    if(window.chatTimers[startTime].remaining <= 0){
+      clearInterval(window.chatTimers[startTime].interval);
       setTimeout(function(){
         timerBox.remove();
       }, 5000)
       timerBox.find('.timerBar').css('color', 'red');
+      delete window.chatTimers[startTime];
     } else {
       const timerExists = $(`.chatTimer[data-start="${startTime}"]`).length > 0;
       if(!timerExists){
         $(".glc-game-log > [class*='-GameLog']").before(timerBox);
       }
-      const timeRemainingString = convertMsToMmSs(remaining);
+      const timeRemainingString = convertMsToMmSs(window.chatTimers[startTime].remaining);
       timerBox.find('.timerBar').text(timeRemainingString);
     }
-  }, 1000);
+  }, intervalTime);
+  
+}
+function create_gamelog_timer(message, duration = 60000, startTime = Date.now(), showCancelButton = window.DM) {
+    
+  if(window.chatTimers === undefined){
+    window.chatTimers = {};
+  }
+
+
+  
+  let timerId;
+  const startTimeString = convertMsToMmSs(duration);
+  const timerBox = $(`<div class='chatTimer' data-start='${startTime}'><span class='timerMessage'>${message}</span><span class='timerBar'>${startTimeString}</span></div>`);
+  const closeButton = $(`<span class='timerCloseButton'>&#10006;</span>`);
+  closeButton.on('click', function(){
+    clearInterval(window.chatTimers[startTime].interval);
+    timerBox.remove();
+  });
+  
+  if(showCancelButton){
+    const buttonContainer = $(`<span class='timerButtonContainer'></span>`);
+
+    const cancelButton = $(`<span class='timerCancelButton material-symbols-outlined'>stop</span>`);
+    cancelButton.on('click', function(){
+      clearInterval(window.chatTimers[startTime].interval);
+      delete window.chatTimers[startTime];
+      timerBox.remove();
+      window.MB.sendMessage("custom/myVTT/cancelTimer", {startTime});
+    });
+    buttonContainer.append(cancelButton);
+  
+
+    const pauseButton = $(`<span class='timerPauseButton material-symbols-outlined'>pause</span>`);
+    pauseButton.on('click', function(){
+      if(pauseButton.hasClass('paused')){
+        const newEndTime = Date.now() + window.chatTimers[startTime].remaining;
+        const newDuration = newEndTime - startTime;
+        window.chatTimers[startTime].interval = setTimerInterval(timerBox, startTime);
+        pauseButton.removeClass('paused');
+        pauseButton.text('pause');
+        window.MB.sendMessage("custom/myVTT/restartTimer", {startTime, newDuration});
+      }else{
+        clearInterval(window.chatTimers[startTime].interval);
+        window.MB.sendMessage("custom/myVTT/pauseTimer", {startTime});
+        pauseButton.addClass('paused');
+        pauseButton.text('play_arrow');
+      }
+
+    });
+    buttonContainer.append(pauseButton);
+    timerBox.append(buttonContainer);
+  }
+  timerBox.append(closeButton);
+  $(".glc-game-log > [class*='-GameLog']").before(timerBox);
+  window.chatTimers[startTime]= {
+    remaining: duration,
+    interval: setTimerInterval(timerBox, startTime)
+  }
 }
 /** The string "THE DM" has been used in a lot of places.
  * This prevents typos or case sensitivity in strings.
@@ -2184,7 +2238,7 @@ function set_campaign_secret(campaignSecret) {
 function projector_scroll_event(event){
       event.stopImmediatePropagation();
       if($('#projector_toggle.enabled > [class*="is-active"]').length>0){
-            let sidebarSize = ($('#hide_rightpanel.point-right').length>0 ? 340 : 0);
+            let sidebarSize = ($('#hide_rightpanel.point-right').length>0 ? get_sidebar_width() : 0);
             let center = center_of_view(); 
 
 
@@ -2843,53 +2897,54 @@ function display_url_embeded(url){
 
 //+++ dialog menus in the style of top level tools
 // todo:
-// -- make menu construction on-demand? (reduce resources?)
-// -- make sure dialogs fit on screen (positioning)
-// -- more general options for dialog menus
+// -- more general options for dialog menus (when used beyond send-player buttons)
 function dialogMenuOption(rootId, container, opt) {
   if(opt.type === 'hr') {
     $(`<span class="js-popup-decoration">${opt.label || ""}</span>`).appendTo(container);      
   } else {
     const icon = opt.icon ? `<span class="material-symbols-outlined" style="font-size: inherit;">${opt.icon}</span>` : "";
-    // this method has some spacing issues:
-    // const ttip = opt.tooltip ? ` hasTooltip" data-name="${opt.tooltip}"` : '"';
-    // so doing old school for now:
-    const ttip = opt.tooltip ? `" title="${opt.tooltip}"` : '"';    
-    const button = $(`<button id='${rootId}_${opt.id}' class="js-popup-option${ttip} data-id='${opt.id}'>${icon}${opt.label}</button>`);
+    // hasTooltip style has some layout issues so doing old school for now:
+    const button = $(`<button id='${rootId}_${opt.id}' class="js-popup-option" data-id='${opt.id}'>${icon}${opt.label}</button>`);
+    if(opt.tooltip) button.attr('title', opt.tooltip)
     //ddbc-tab-options__header-heading
     const callback = opt.callback;
+    const closeAfter = opt.closeAfter;
     if(opt.active) button.addClass("js-popup--is-active");
     button.on('click', function (e) {
       const buttonSelectedClasses = "js-popup--is-active"
       $(this).toggleClass(buttonSelectedClasses);
       e.preventDefault()
       if(callback) callback(e);
+      if(closeAfter) $(e.target).closest(".js-popup")?.[0]?.close();      
     });
     button.appendTo(container);
   }
 }
 function createDialogMenu(rootId, options) {
   const dialog = $(`<dialog id="${rootId}" class="js-popup">
-  <form method="dialog"><div class="js-popup-options"/></form></dialog>`);
+  <form method="dialog"><div class="js-popup-options prevent-sidebar-modal-close"/></form></dialog>`);
   const contain = dialog.find('.js-popup-options')[0]
   options.map((opt) => dialogMenuOption(rootId, contain, opt));
   return dialog[0]; //note: return native element, NOT jquery
 }
 
-function createDialogMenuTrigger(iconName, menuId, create, onShow) {
-  const buttonId = uuid();
-  const button = $(`<button id="${buttonId}" class="js-popup-trigger" width="100px" height="100px">
-  <span class="material-symbols-outlined">${iconName}</span></button>`);
-  button.on('click', (e) => {
+//turn an element into a menu trigger
+function makeDialogMenuTrigger(element, trigger, menuId, createMenu, onShow) {
+  const elementId = uuid(); //give it a uuid so we can find it later in menu code
+  element.attr('id', elementId);
+  element.addClass("js-popup-trigger")
+  element.off(trigger).on(trigger, (e) => {
     //create the dialog on first use
-    const dialog = $("#"+menuId, e.target.ownerDocument)?.[0] || create(menuId, e.target);
+    e.preventDefault();
+    e.stopPropagation();
+    const dialog = $("#"+menuId, e.target.ownerDocument)?.[0] || createMenu(menuId, e.target);
     if(dialog.open) {
       dialog.close();
     } else {
+      if(onShow) onShow(e, dialog, elementId); //before show callback
       //right now using show (but could decide that showModal is better)
-      if(onShow) onShow(e, dialog);
       dialog.show(); //so we can get dimensions 
-      $(dialog).attr("data-content", buttonId) //remember triggering button
+      $(dialog).attr("data-whichbutton", elementId) //remember who triggered
       const rect = $(e.target)[0].getBoundingClientRect();
       const menuRect = $(dialog)[0].getBoundingClientRect();
       const winW = window.innerWidth;
@@ -2907,7 +2962,7 @@ function createDialogMenuTrigger(iconName, menuId, create, onShow) {
       });
     }
   });
-  return button;
+  return element;
 }
 
 function dialogCloser(e, force) {
@@ -2915,13 +2970,47 @@ function dialogCloser(e, force) {
     const isClickInside = menu.contains(e.target);
     const isTriggerClick = e.target.closest('.js-popup-trigger');
     const isClickOnChild = menu.contains(e.target);
-    console.log("CLose?", force, menu, isClickInside, isTriggerClick, isClickOnChild);
     if (!isClickInside && !isTriggerClick && !isClickOnChild || force) menu.close();
   });
 }
 function addDialogCloser(element) {
-  //named function so multiple event listeners don't happen  
-  element.ownerDocument.addEventListener('mousedown', dialogCloser);
+  const doc = element.ownerDocument;
+  //even tho named function so multiple event listeners shouldn't happen
+  //attempt to optimize
+  if (doc._hasDialogCloser) return;
+  doc.addEventListener('mousedown', dialogCloser);
+  doc._hasDialogCloser = true;
+}
+
+function sendPopElement(element, whisper) {
+  const what = element.find(".magnify, .monster-image, video");
+  const src = what.find('source').length>0 ? what.find('source').attr('src') : what.attr("src");
+  const video = what.prop('nodeName') === 'VIDEO';  
+  if(src) {
+    const msg = { src, timed: 10000, from: window.PLAYER_ID, type: video ? "iframe" : "image" };
+    if(whisper) msg.whisper = whisper;
+    window.MB.sendMessage('custom/myVTT/Popup',  msg);
+  } else {
+    console.error("Could not find image to pop", src);
+  }
+}
+function sendClonedElement(element, whisper) {
+  const targetBlock = $(element).clone();
+  targetBlock.find('button.block-send-to-game-log').remove();
+  targetBlock.find('img, video').removeAttr('width height style').toggleClass('magnify', true);
+  const video = targetBlock.find('video');
+
+  if(video) {
+    const videoElements = targetBlock.find('video');
+    for(let i=0; i<videoElements.length; i++){
+      const videoElement = videoElements[i];
+      const source = $(videoElement).find('source');
+      const src = source.length>0 ? source.attr('src') : $(videoElement).attr('src');
+      source.remove();
+      $(videoElement).attr({muted:'muted', disableRemotePlayback: true, src:src, href:src});
+    }
+  }
+  send_html_to_gamelog(`<p>${targetBlock[0].outerHTML}</p>`, whisper);
 }
 
 function createSendPlayerMenu(menuId, target) {
@@ -2930,25 +3019,9 @@ function createSendPlayerMenu(menuId, target) {
     const dialog = $(e.target).closest(".js-popup")?.[0];      
     const options = $(e.target).closest(".js-popup-options")?.[0];
     const selected = $(options).find('.js-popup--is-active').map((i, el) => el.getAttribute('data-id')).get().filter((a)=> !a.startsWith('_'));
-    const theTriggeringButton = $(`#${$(dialog).attr("data-content")}`);
-    const targetBlock = $(theTriggeringButton).parent().clone();
-    targetBlock.find('button.block-send-to-game-log').remove();
-    targetBlock.find('img').removeAttr('width height style').toggleClass('magnify', true);
-    if(verb === 'send') {
-      //todo: if selected is everyone then use undefined here:
-      send_html_to_gamelog(`<p>${targetBlock[0].outerHTML}</p>`, selected);
-    } else {
-      const imgSrc = $(".magnify")?.attr("src")
-      //todo: decide to send to everyone or iterate through users....
-      if(imgSrc) {
-        window.MB.sendMessage('custom/myVTT/Popup',  {
-          src: imgSrc,
-          timed: 10000,
-          whisper: selected,
-          from:window.PLAYER_ID
-        });
-      }
-    }
+    const theTriggeringButton = $(`#${$(dialog).attr("data-whichbutton")}`);
+    //todo: if selected is everyone then use undefined here:
+    ((verb === 'pop') ? sendPopElement : sendClonedElement)(theTriggeringButton.parent(), selected);
     $(e.target).removeClass('js-popup--is-active');
   };
   const toggle_everyone = (e, skipCount) => {
@@ -2963,30 +3036,34 @@ function createSendPlayerMenu(menuId, target) {
   }
   const users = [...new Map(window.playerUsers.map(p => [p.userId, {id: p.userId, label: p.userName, active: true}])).values(), { id: SPECTATOR_WHISPER_ID, label: "-Spectator-", active: true}];
   const menu = createDialogMenu(menuId, [
-    { id: "_send", label: "Send To Log", callback: (e) => callback_with_selection(e, "send"), icon: "login", tooltip: "Send to Gamelog of selected users"},
-    { id: "_pop", label: "Popup", icon: "toast", callback: (e) => callback_with_selection(e, "pop"), tooltip: "Popup a momentary image for selected users"},
+    { id: "_send", label: "Send To Log", callback: (e) => callback_with_selection(e, "send"), icon: "login", tooltip: "Send to Gamelog of selected users", closeAfter: true},
+    { id: "_pop", label: "Popup", icon: "toast", callback: (e) => callback_with_selection(e, "pop"), tooltip: "Popup a momentary image for selected users", closeAfter: true },
     { id: "_everyone", label: "Toggle All", icon: "toggle_on", callback: (e) => toggle_everyone(e, 3), tooltip: "Toggle user buttons below"},
     { type: "hr", label: "Users" },
     ...users
   ]);
-  $(menu).css
   $(target).closest('body').append(menu);
   addDialogCloser(target);
   return menu;
 }
 
+function setPlayerButtonSetPopupStatus(e, dialog, buttonId) {
+  const hasPopupOption = $("#"+buttonId).attr("data-haspopup");
+  $("#send-player-menu__pop", e.target.ownerDocument).css("display", hasPopupOption ? "" : "none"); 
+}
 function createSendPlayerButton(parent, icon, hasPopupOption=false ) {
-  const menuId = "send-player-menu";
-  const button = createDialogMenuTrigger(icon, menuId, createSendPlayerMenu, (e,dialog) => {
-    //hide/show popup option in shared menu
-    $($(dialog).find("button")[1]).css("display", hasPopupOption ? "" : "none");
+  const element = $(`<button width="200px" height="200px"> <span class="material-symbols-outlined">${icon}</span></button>`);
+  const button = makeDialogMenuTrigger(element, 'contextmenu', "send-player-menu", createSendPlayerMenu, setPlayerButtonSetPopupStatus);
+  button.off('click').on('click', (e)=> {
+    e.preventDefault();
+    e.stopPropagation();
+    sendClonedElement($(e.target).closest("button").parent());
   });
+  if(hasPopupOption) button.attr("data-haspopup", "1");
   button.addClass("block-send-to-game-log");
-  if(hasPopupOption) button.addClass("has-popup-option");
-  button.css("right", "2px"); //todo: temp so we see both buttons
   return button;
 }
-//--- dialog menus 
+//-end- dialog menus 
 
 function find_or_create_generic_draggable_window(id, titleBarText, addLoadingIndicator = true, addPopoutButton = false, popoutSelector=``, width='80%', height='80%', top='10%', left='10%', showSlow = true, cancelClasses='', hideOnX = false, alwaysDisplayTitle = false) {
   console.log(`find_or_create_generic_draggable_window id: ${id}, titleBarText: ${titleBarText}, addLoadingIndicator: ${addLoadingIndicator}, addPopoutButton: ${addPopoutButton}`);

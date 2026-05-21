@@ -266,7 +266,7 @@ class JournalManager{
 			if(is_abovevtt_page()){
 				this.build_journal();
 			}
-			if(window.DM && !is_gamelog_popout()){
+			if(window.DM && !is_gamelog_popout() && is_abovevtt_page()){
 				// also sync the journal
 				window.JOURNAL?.sync();
 			}
@@ -2245,7 +2245,7 @@ class JournalManager{
 	    }
 	}
 	block_send_to_buttons(target){
-		const blocks = target.find('img:not(.mon-stat-block__separator-img), .text--quote-box, .rules-text, .block-torn-paper, .read-aloud-text, .dmScreenChunk')
+		const blocks = target.find('img:not(.mon-stat-block__separator-img), video, .text--quote-box, .rules-text, .block-torn-paper, .read-aloud-text, .dmScreenChunk')
 
    		blocks.wrap(function(i){
 			const container = $(`<div class='note-text' style='position:relative;max-width: 100%;'></div>`)
@@ -2259,10 +2259,8 @@ class JournalManager{
 			return container;
 		});
 		blocks.each((i, block) => {
-			createSendPlayerButton(block, "login", block instanceof HTMLImageElement).insertAfter(block);			
+			createSendPlayerButton(block, "login", block instanceof HTMLImageElement || block instanceof HTMLVideoElement).insertAfter(block);			
 		});
-		//todo: decide if we like new method and cleanup this old one
-		//sendToGamelogButton.clone(true, true).insertAfter(blocks);
 
 		const tables = target.find('table');
 		const allDiceRegex = /(\d+)?d(?:100|20|12|10|8|6|4)((?:kh|kl|ro(<|<=|>|>=|=)|min=)\d+)*/g; // ([numbers]d[diceTypes]kh[numbers] or [numbers]d[diceTypes]kl[numbers]) or [numbers]d[diceTypes]
@@ -2272,9 +2270,8 @@ class JournalManager{
 				'position': 'relative',
 				'padding-right': '10px'
 			});
-			//result.append(sendToGamelogButton.clone(true, true));
 			result.each((i, block) =>
-				block.append(createSendPlayerButton(block, "login")));
+				$(block).append(createSendPlayerButton(block, "login")));
 		}
 	}
 				   
@@ -2455,13 +2452,14 @@ class JournalManager{
 		}
 		const embededIframes = target.find('iframe');
 		for(let i=0; i<embededIframes.length; i++){
-			if(!embededIframes[i].src.startsWith(window.EXTENSION_PATH))
+			if(embededIframes[i].src.includes("youtube")){
+				embededIframes[i].src = embededIframes[i].src.replace(/youtube(-nocookie)?\.com/gi, 'youtube-nocookie.com');
+			}
+			else if(!embededIframes[i].src.startsWith(window.EXTENSION_PATH)){
 				embededIframes[i].src = `${window.EXTENSION_PATH}iframe.html?src=${encodeURIComponent(embededIframes[i].src)}`;
+			}
 		}
 
-
-
-		
 
     	let data = $(target).clone().html();
 
@@ -3018,7 +3016,41 @@ class JournalManager{
 		}
 
     }
-	
+	getCustomCR(statBlock){
+		if(statBlock == undefined) return 0;
+       
+		statBlock.find('style').remove();
+		statBlock=statBlock[0].innerHTML;
+		let crText = $(statBlock).find('.custom-challenge-rating.custom-stat').text();
+		if(crText == '' || crText == undefined){
+			let searchText = statBlock.replaceAll('mon-stat-block-2024', '').replaceAll(/\&nbsp\;/g,' ')
+
+			let statBlockCR = searchText.matchAll(/[\s>]CR[\s]+([0-9]+(\/[0-9])?)/gi).next()
+			if(statBlockCR.value != undefined){
+			if(statBlockCR.value[1] != undefined)
+				crText = statBlockCR.value[1];
+			} 
+			else{
+			statBlockCR = searchText.matchAll(/[\s>](CR[\W]|challenge)[\s\S]*?[\s>]([0-9]+(\/[0-9])?)/gi).next()
+
+				if(statBlockCR.value != undefined){
+					if(statBlockCR.value[2] != undefined)
+						crText = statBlockCR.value[2];
+				}  
+			}
+		}
+		if(crText == '' || crText == undefined) return 0;
+
+		try{
+			const cr = eval(crText);
+			return cr;
+		}catch(e){
+			console.warn(`Could not parse CR from custom stat block, defaulting to 0. CR text was ${crText}`);
+			return 0;
+		}
+	}
+
+
 	note_visibility(id,visibility){
 		this.notes[id].player=visibility;
 
@@ -4612,6 +4644,15 @@ class JournalManager{
 				self.notes[note_id].plain = tinymce.activeEditor.getContent({ format: 'text' });
 				self.notes[note_id].statBlock = statBlock;
 				self.persist();
+				if(statBlock){
+					const row = $(`#tokens-panel .sidebar-list-item-row[data-id='${note_id}']`);
+					const subtitle = row.find('.sidebar-list-item-row-details-subtitle');
+					subtitle.find('.challenge-rating').remove();
+					const statBlock = $(`<div>${self.notes[note_id].text}</div>`)
+					const cr = window.JOURNAL.getCustomCR(statBlock);
+					subtitle.prepend(`<div class="subtitle-attibute challenge-rating"><span class="plain-text">CR</span>${cr}</div>`)
+				}
+			
 				const dmScreenPageOpen = $('#dmScreenCustomBlock');
 				if(dmScreenPageOpen.length > 0){
 					const openNoteId = dmScreenPageOpen.attr('data-note-id');

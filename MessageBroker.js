@@ -227,6 +227,7 @@ function setupMBIntervals(){
 	window.pingInterval = setInterval(function() {
 		window.MB.sendPing();
 		window.MB.sendAbovePing();
+		checkForExportRemind();
 	}, 480000);
 }
 
@@ -620,7 +621,7 @@ class MessageBroker {
 					}
 				}
 			}
-			if (msg.eventType == "dice/roll/pending") {
+			if(msg.eventType == "dice/roll/pending") {
 				// check for injected_data!
 				if (msg.data.injected_data) {
 					notify_gamelog();
@@ -911,7 +912,7 @@ class MessageBroker {
 				return;
 			}
 			// WE NEED TO IGNORE CERTAIN MESSAGE IF THEY'RE NOT FROM THE CURRENT SCENE
-			if (window.CURRENT_SCENE_DATA == undefined || (msg.sceneId && window.CURRENT_SCENE_DATA && msg.sceneId !== window.CURRENT_SCENE_DATA.id && [
+			if(window.CURRENT_SCENE_DATA == undefined || (msg.sceneId && window.CURRENT_SCENE_DATA && msg.sceneId !== window.CURRENT_SCENE_DATA.id && [
 				"custom/myVTT/delete_token",
 				"custom/myVTT/createtoken",
 				"custom/myVTT/reveal",
@@ -924,7 +925,7 @@ class MessageBroker {
 				console.log("skipping msg from a different scene");
 				return;
 			}
-			if (msg.eventType == "character-sheet/item-shared/fulfilled"){
+			if(msg.eventType == "character-sheet/item-shared/fulfilled"){
 				DDBApi.debounceGetPartyInventory();
 				return;
 			} else if (msg.eventType == "custom/myVTT/token" && (msg.sceneId == window.CURRENT_SCENE_DATA.id || msg.data.id in window.TOKEN_OBJECTS)) {
@@ -977,6 +978,34 @@ class MessageBroker {
 					}
 					create_combat_tracker_timer(duration, startTime)
 				}
+			} else if(msg.eventType == "custom/myVTT/cancelTimer"){
+				const {startTime} = msg.data;
+				if(window.chatTimers[startTime]){
+					clearInterval(window.chatTimers[startTime].interval);
+					delete window.chatTimers[startTime];
+					$(`.chatTimer[data-start="${startTime}"]`).remove();
+				}
+				return;
+			} else if(msg.eventType == "custom/myVTT/pauseTimer"){
+				const {startTime} = msg.data;
+				if(window.chatTimers[startTime]){
+					clearInterval(window.chatTimers[startTime].interval);
+				}
+				const pauseButton = $(`.chatTimer[data-start="${startTime}"] .timerPauseButton`);
+				pauseButton.text("play_arrow");
+				pauseButton.toggleClass("paused", true);
+				return;
+			} else if(msg.eventType == "custom/myVTT/restartTimer"){
+				const {startTime, newDuration} = msg.data;
+				const timerBox = $(`.chatTimer[data-start="${startTime}"]`);
+				const pauseButton = timerBox.find('.timerPauseButton');
+				pauseButton.text("pause");
+				pauseButton.toggleClass("paused", false);
+				if(window.chatTimers[startTime]){
+					clearInterval(window.chatTimers[startTime].interval);
+					window.chatTimers[startTime].interval = setTimerInterval(timerBox, startTime);
+				}
+				return;
 			} else if (msg.eventType == "custom/myVTT/open-url-embed"){
 				const url = msg.data;
 				display_url_embeded(url);
@@ -1121,7 +1150,6 @@ class MessageBroker {
 				{
 					//$("[id='PlayerSheet"+getPlayerIDFromSheet(msg.data.player_sheet)+"']").attr('src', function(i, val) { return val; });
 					$("[id='PlayerSheet"+getPlayerIDFromSheet(msg.data.player_sheet)+"']").attr('data-changed', 'true');
-					return;
 				}
 			} else if(msg.eventType=="custom/myVTT/JournalChapters"){
 				if(!window.DM){
@@ -1564,6 +1592,7 @@ class MessageBroker {
 					window.diceCurrentPeers = window.diceCurrentPeers.filter(d=> d.peer != call.peer)
 					window.diceCurrentPeers.push(call);
 				}
+				return;
 			}
 
 
@@ -2452,7 +2481,7 @@ class MessageBroker {
 				alertText = 'Check console warnings for more message data.'
 			}
 			
-			alert(`You reached the maximum message size for "${message.eventType.split('/')[message.eventType.split('/').length-1]}".\n\n${alertText}`);
+			showErrorMessage(`You reached the maximum message size for "${message.eventType.split('/')[message.eventType.split('/').length-1]}".\n\n${alertText}`);
 			return;
 		}
 

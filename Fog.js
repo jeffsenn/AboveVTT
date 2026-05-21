@@ -720,8 +720,8 @@ function is_door_in_visible_light(door, imageData){
 	const centerY = parseInt($(door).css('--mid-y')) / window.CURRENT_SCENE_DATA.scale_factor;
 	let pixeldata;
 
-	for(let x=centerX-10; x<=centerX+10; x++){
-		for(let y=centerY-10; y<=centerY+10; y++){
+	for(let x=centerX-3; x<=centerX+3; x++){
+		for(let y=centerY-3; y<=centerY+3; y++){
 			pixeldata = getPixelFromImageData(imageData, x, y);
 			if(pixeldata[0]>=5 || pixeldata[1]>=5 || pixeldata[2]>=5)
 				return true;
@@ -1438,7 +1438,7 @@ function reset_canvas(apply_zoom=true) {
 	$("#scene_map_container").css({"width": sceneMapWidth, "height": sceneMapHeight});
 	// grid overlay css tiling needs a container to fill that matches map
 	$("#grid_svg_overlay_container").css({"width": sceneMapWidth, "height": sceneMapHeight});
-	$("#dragbox").css({"width": sceneMapWidth, "height": sceneMapHeight});	
+	$("#dragbox, #rotDragbox").css({"width": sceneMapWidth, "height": sceneMapHeight});	
 	ctxScale('peer_overlay', sceneMapWidth, sceneMapHeight);
 	ctxScale('temp_overlay', sceneMapWidth, sceneMapHeight);
 	ctxScale('draw_overlay_under_fog_darkness', sceneMapWidth, sceneMapHeight, true);
@@ -3167,7 +3167,7 @@ function drawing_mousedown(e) {
 		context.setLineDash([10, 5])
 		if (e.which == 1) {
 			$("#temp_overlay").css('cursor', 'crosshair');
-			$("#temp_overlay").css('z-index', '50');
+			$("#dragbox").css('z-index', '50');
 		}		
 	}
 	else if(window.DRAWFUNCTION === 'elev'){
@@ -4682,7 +4682,7 @@ function drawing_mouseup(e) {
 			curr.selected = (shiftHeld && curr.selected == true) || (fullyInside ? isRotatedSquareInsideRect : intersectsRotatedSquare) (
 				{x:x0, y:y0, width:x1-x0, height: y1-y0}, CX, CY, size, R);
 		}
-		$("#temp_overlay").css('z-index', '25');
+		$("#dragbox").css('z-index', '');
 		draw_selected_token_bounding_box();
 	}
 	else if (window.DRAWFUNCTION == "measure") {
@@ -5291,6 +5291,50 @@ function drawBrushArrow(ctx, points, style, lineWidth=6, scale=window.CURRENT_SC
 	drawPolygon(ctx, arrowPoints, style, false, Math.max(lineWidth, 1), undefined, undefined, scale);
 }
 
+function insetPolygonVertices(points, insetAmount) {
+    if (points.length < 3) return points;
+    
+    const insetPoints = [];
+    
+    for (let i = 0; i < points.length; i++) {
+        const prev = points[(i - 1 + points.length) % points.length];
+        const curr = points[i];
+        const next = points[(i + 1) % points.length];
+        
+        const prevDir = { x: curr.x - prev.x, y: curr.y - prev.y };
+        const nextDir = { x: next.x - curr.x, y: next.y - curr.y };
+        
+        const prevLen = Math.sqrt(prevDir.x * prevDir.x + prevDir.y * prevDir.y);
+        const nextLen = Math.sqrt(nextDir.x * nextDir.x + nextDir.y * nextDir.y);
+        
+        if (prevLen === 0 || nextLen === 0) {
+            insetPoints.push(curr);
+            continue;
+        }
+        
+        prevDir.x /= prevLen;
+        prevDir.y /= prevLen;
+        nextDir.x /= nextLen;
+        nextDir.y /= nextLen;
+        
+        const perpPrev = { x: prevDir.y, y: -prevDir.x };
+        const perpNext = { x: nextDir.y, y: -nextDir.x };
+        
+        const bisector = { x: perpPrev.x + perpNext.x, y: perpPrev.y + perpNext.y };
+        const bisectorLen = Math.sqrt(bisector.x * bisector.x + bisector.y * bisector.y);
+        
+        if (bisectorLen > 0.01) {
+            bisector.x /= bisectorLen;
+            bisector.y /= bisectorLen;
+            insetPoints.push({
+                x: curr.x - bisector.x * insetAmount,
+                y: curr.y - bisector.y * insetAmount
+            });
+        }
+    }
+    
+    return insetPoints;
+}
 function drawPolygon (
 	ctx,
 	points,
@@ -5305,13 +5349,10 @@ function drawPolygon (
 ) {
 	if(fill && islight && replacefog){
 		
-
+		ctx.save();
 		ctx.fillStyle = 'rgba(255,255,255,1)';
-		ctx.strokeStyle = 'rgba(0,0,0,1)';
-		
 		ctx.beginPath();
 		let adjustScale = (scale/window.CURRENT_SCENE_DATA.scale_factor)	
-		
 		ctx.moveTo(points[0].x/adjustScale/window.CURRENT_SCENE_DATA.scale_factor, points[0].y/adjustScale/window.CURRENT_SCENE_DATA.scale_factor);
 		ctx.lineWidth = lineWidth;
 		
@@ -5324,13 +5365,8 @@ function drawPolygon (
 		}
 		ctx.closePath();
 		ctx.fill();
-		if(lineWidth>0){
-			ctx.save();
-			ctx.globalCompositeOperation = 'destination-out';
-			ctx.stroke();
-			ctx.restore();
-		}
-	}
+		ctx.restore();
+	}	
 	else{
 		ctx.save();
 		ctx.beginPath();
@@ -7471,7 +7507,7 @@ function particleLook(ctx, walls, lightRadius=100000, fog=false, fogStyle, fogTy
 	let movePolygon = [];
 	let noDarknessPolygon = [];
 
-	let canSeeDarkness = (auraId !== undefined && (window.TOKEN_OBJECTS[auraId].options.sight == 'devilsight' || window.TOKEN_OBJECTS[auraId].options.sight =='truesight'));
+	let canSeeDarkness = (auraId !== undefined && (window.TOKEN_OBJECTS[auraId].options.devilsight?.feet > 0 || window.TOKEN_OBJECTS[auraId].options.truesight?.feet > 0));
 	let tokenElev = 0;
 	if(auraId !== undefined && window.TOKEN_OBJECTS[auraId].options.elev !== undefined && window.TOKEN_OBJECTS[auraId].options.elev !== '') 
 		tokenElev = parseInt(window.TOKEN_OBJECTS[auraId].options.elev)
@@ -7788,10 +7824,11 @@ function particleLook(ctx, walls, lightRadius=100000, fog=false, fogStyle, fogTy
 			drawPolygon(ctx, lightPolygon, fogStyle, undefined, undefined, undefined, undefined, undefined, true);
 		}	
 	} 	
-	
-	window.lightPolygon = lightPolygon;
+	//inset polygon by wall width so light doesn't seep through walls or reveal doors outside of los.
+	const wallWidth = window.CURRENT_SCENE_DATA.scale_factor || 1;
+	window.lightPolygon = insetPolygonVertices(lightPolygon, wallWidth);
 	window.movePolygon = movePolygon;
-	window.noDarknessPolygon = noDarknessPolygon;
+	window.noDarknessPolygon = insetPolygonVertices(noDarknessPolygon, wallWidth);
 };
 
 function rectLineIntersection(x1, y1, x2, y2, rectx, rexty, rectw, recth) {
@@ -7994,11 +8031,12 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 		if (window.lineOfSightPolygons === undefined) {
 			window.lineOfSightPolygons = {};
 		}
+		const hasDevilOrTruesight = (window.TOKEN_OBJECTS[auraId].options.truesight.feet > 0 || window.TOKEN_OBJECTS[auraId].options.devilsight.feet > 0);
 		if (window.lineOfSightPolygons[auraId] !== undefined &&
 			window.lineOfSightPolygons[auraId].x === tokenPos.x &&
 			window.lineOfSightPolygons[auraId].y === tokenPos.y &&
 			window.lineOfSightPolygons[auraId].numberofwalls === allWalls.length &&
-			window.lineOfSightPolygons[auraId].visionType === window.TOKEN_OBJECTS[auraId].options.sight &&
+			window.lineOfSightPolygons[auraId].visionType === hasDevilOrTruesight &&
 			window.lineOfSightPolygons[auraId].scaleCreated === window.TOKEN_OBJECTS[auraId].options.scaleCreated &&
 			window.lineOfSightPolygons[auraId].elev === window.TOKEN_OBJECTS[auraId].options.elev &&
 			darknessMoved !== true) {
@@ -8029,19 +8067,19 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 				y: tokenPos.y,
 				numberofwalls: allWalls.length,
 				clippath: pts,
-				visionType: window.TOKEN_OBJECTS[auraId].options.sight,
+				visionType: hasDevilOrTruesight,
 				scaleCreated: window.TOKEN_OBJECTS[auraId].options.scaleCreated,
 				elev: window.TOKEN_OBJECTS[auraId].options.elev
 			}
 
-			$(`.aura-element-container-clip[id='${auraId}']:not(.vision)`).css('clip-path', `polygon(${pts})`)
+			$(`.aura-element-container-clip[id='${auraId}']:is(.light, .darkvision)`).css('clip-path', `polygon(${pts})`)
 
-			if (window.lineOfSightPolygons[auraId] !== undefined && (window.TOKEN_OBJECTS[auraId].options.sight === 'devilsight' || window.TOKEN_OBJECTS[auraId].options.sight === 'truesight')) {
+			if (window.lineOfSightPolygons[auraId] !== undefined && (window.TOKEN_OBJECTS[auraId].options.devilsight?.feet > 0 || window.TOKEN_OBJECTS[auraId].options.truesight?.feet > 0)) {
 				let pts = window.noDarknessPolygon
 					.map(p => `${p.x / adjustScale}px ${p.y / adjustScale}px`)
 					.join(', ');
 				window.lineOfSightPolygons[auraId].devilsightClip = pts;
-				$(`.aura-element-container-clip[id='${auraId}'].vision`).css('clip-path', `polygon(${pts})`)
+				$(`.aura-element-container-clip[id='${auraId}'].vision:is(.devilsight, .truesight)`).css('clip-path', `polygon(${pts})`)
 
 			}
 
@@ -8051,8 +8089,11 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 			clipped_light(auraId, window.lightPolygon, playerTokenId, canvasWidth, canvasHeight, darknessBoundarys, selectedIds.length);
 
 		}
-
-		let drawDarkVision = false;
+		lightInLosContext.globalCompositeOperation='lighten';
+		if (window.lightAuraClipPolygon[auraId]?.light !== undefined) {
+			clip_circle_with_polygon(lightInLosContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].light2.range, window.lightAuraClipPolygon[auraId].light2.color, window.lightPolygon);
+			clip_circle_with_polygon(lightInLosContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].light1.range, window.lightAuraClipPolygon[auraId].light1.color, window.lightPolygon);
+		}
 		if (selectedIds.length === 0 || found || (window.SelectedTokenVision !== true && !window.DM)) {
 
 			let hideVisionWhenNoPlayerToken = (playerTokenId === undefined && !window.TOKEN_OBJECTS[auraId].options.share_vision && !window.DM && window.TOKEN_OBJECTS[auraId].options.itemType !== 'pc')
@@ -8062,37 +8103,36 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 			if (!hideVisionWhenNoPlayerToken && !hideVisionWhenPlayerTokenExists) {
 				//when player token does not exist show vision for all pc tokens and shared vision for other tokens. Mostly used by DM's, streams and tabletop tv games.
 				//when player token does exist show your own vision and shared vision.
-				
-				if (window.noDarknessPolygon?.length>1 && (window.DM !== true || window.SelectedTokenVision === true) && (window.TOKEN_OBJECTS[auraId].options.sight === 'truesight' || window.TOKEN_OBJECTS[auraId].options.sight === 'devilsight')) {					
-					clip_circle_with_polygon(devilsightCanvasContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].darkvision, '#fff', window.noDarknessPolygon)
-					if (window.TOKEN_OBJECTS[auraId].options.sight === 'truesight') {
-						clip_circle_with_polygon(truesightCanvasContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].darkvision, '#fff', window.noDarknessPolygon)
-					}
-				}
-
-				if (window.lightAuraClipPolygon[auraId]?.darkvision !== undefined) {
-					drawDarkVision = true;
-				}
 
 				$(`.aura-element-container-clip[id='${auraId}'] [id*='vision_']`).toggleClass('notVisible', false);
 			
-				drawPolygon(offscreenContext, window.lightPolygon, 'rgba(255, 255, 255, 1)', true, 2, undefined, undefined, undefined, true, true); //draw to offscreen canvas so we don't have to render every draw and use this for a mask	
+				drawPolygon(offscreenContext, window.lightPolygon, 'rgba(255, 255, 255, 1)', true, 0, undefined, undefined, undefined, true, true); //draw to offscreen canvas so we don't have to render every draw and use this for a mask	
 				drawPolygon(moveOffscreenCanvasMaskContext, window.movePolygon, 'rgba(255, 255, 255, 1)', true, 0, undefined, undefined, undefined, true, true); //draw to offscreen canvas so we don't have to render every draw and use this for a mask
+				if(window.lightAuraClipPolygon[auraId] != undefined){
+					if (window.lightAuraClipPolygon[auraId].darkvision > 0) {
+						clip_circle_with_polygon(lightInLosContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].darkvision, window.lightAuraClipPolygon[auraId].vision.color, window.lightPolygon);
+					}
+					if (window.noDarknessPolygon?.length>1 && (window.DM !== true || window.SelectedTokenVision === true)) {	
+						devilsightCanvasContext.globalCompositeOperation = "lighten";				
+						if (window.lightAuraClipPolygon[auraId].devilsight > 0) {
+							clip_circle_with_polygon(devilsightCanvasContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].devilsight, '#fff', window.noDarknessPolygon)
+							clip_circle_with_polygon(lightInLosContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].devilsight, window.lightAuraClipPolygon[auraId].devilsight.color, window.noDarknessPolygon);
+							clip_circle_with_polygon(offscreenContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].devilsight, '#fff', window.noDarknessPolygon);
+						}	
+						if (window.lightAuraClipPolygon[auraId].truesight > 0) {
+							truesightCanvasContext.globalCompositeOperation = "lighten";
+							clip_circle_with_polygon(devilsightCanvasContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].truesight, '#fff', window.noDarknessPolygon)
+							clip_circle_with_polygon(truesightCanvasContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].truesight, '#fff', window.noDarknessPolygon)
+							clip_circle_with_polygon(lightInLosContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].truesight, window.lightAuraClipPolygon[auraId].truesight.color, window.noDarknessPolygon);
+							clip_circle_with_polygon(offscreenContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].truesight, '#fff', window.noDarknessPolygon);
+						}
+					}
+				}
 			}
 		}
-		if (drawDarkVision || window.lightAuraClipPolygon[auraId]?.light !== undefined) {
-			lightInLosContext.globalCompositeOperation='lighten';
-			if (window.lightAuraClipPolygon[auraId]?.light !== undefined) {
-				clip_circle_with_polygon(lightInLosContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].light2.range, window.lightAuraClipPolygon[auraId].light2.color, window.lightPolygon);
-				clip_circle_with_polygon(lightInLosContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].light1.range, window.lightAuraClipPolygon[auraId].light1.color, window.lightPolygon);
-			}
-			if(drawDarkVision){
-				clip_circle_with_polygon(lightInLosContext, window.lightAuraClipPolygon[auraId].middle.x, window.lightAuraClipPolygon[auraId].middle.y, window.lightAuraClipPolygon[auraId].darkvision, window.lightAuraClipPolygon[auraId].vision.color, window.lightPolygon);
-			}
-		}
+
 	}
-	offscreenContext.globalCompositeOperation = "source-over";
-	offscreenContext.drawImage(devilsightCanvas, 0, 0);
+
 
 	const tokenObjectValues = Object.values(window.TOKEN_OBJECTS);
 	const aPlayerTokenExists = tokenObjectValues.some(d => d.options.id.startsWith('/profile'))
@@ -8122,7 +8162,7 @@ function redraw_light(darknessMoved = false, limitActiveRays = 0) {
 			lightInLosContext.drawImage(devilsightCanvas, 0, 0);		
 		}
 	}
-	if(window.CURRENT_SCENE_DATA.darkness_filter != 0){
+	else {
 		lightInLosContext.globalCompositeOperation='lighten';	
 		lightInLosContext.drawImage($('#light_overlay')[0], 0, 0);
 		
@@ -8245,7 +8285,7 @@ function getTokenVision(tokenId, darknessMoved){
 		visionType: window.TOKEN_OBJECTS[tokenId].options.sight,
 		scaleCreated: window.TOKEN_OBJECTS[tokenId].options.scaleCreated
 	}
-	if(window.lineOfSightPolygons[tokenId] !== undefined &&(window.TOKEN_OBJECTS[tokenId].options.sight === 'devilsight' || window.TOKEN_OBJECTS[tokenId].options.sight === 'truesight')){
+	if(window.lineOfSightPolygons[tokenId] !== undefined &&(window.TOKEN_OBJECTS[tokenId].options.devilsight?.feet > 0 || window.TOKEN_OBJECTS[tokenId].options.truesight?.feet > 0)){
 		let path = "";
 		for (let i = 0; i < window.noDarknessPolygon.length; i++){
 			path += (i && "L" || "M") + window.noDarknessPolygon[i].x / adjustScale + ',' + window.noDarknessPolygon[i].y/adjustScale
@@ -8437,6 +8477,10 @@ function clipped_light(auraId, maskPolygon, playerTokenId, canvasWidth = getScen
 	
 	let visionColor = `rgba(0,0,0,0)`;
 	let visionRange = 0;
+	let devilsightColor = `rgba(0,0,0,0)`;
+	let devilsightRange = 0;
+	let truesightColor = `rgba(0,0,0,0)`;
+	let truesightRange = 0;
 	let light1Color = `rgba(0,0,0,0)`;
 	let light2Color = `rgba(0,0,0,0)`;
 	let light1Range = 0;
@@ -8444,6 +8488,8 @@ function clipped_light(auraId, maskPolygon, playerTokenId, canvasWidth = getScen
 	let blackLight1 = 1;
 	let blackLight2 = 1;
 	let blackVision = 1;
+	let blackDevilsight = 1;
+	let blackTruesight = 1;
 
 	if(window.TOKEN_OBJECTS[auraId] !== undefined){
 		if(window.TOKEN_OBJECTS[auraId].options.vision !== undefined){
@@ -8452,6 +8498,20 @@ function clipped_light(auraId, maskPolygon, playerTokenId, canvasWidth = getScen
 
 			if(window.TOKEN_OBJECTS[auraId].options.vision.feet !== undefined)
 				visionRange = window.TOKEN_OBJECTS[auraId].options.vision.feet;
+		}
+		if(window.TOKEN_OBJECTS[auraId].options.devilsight !== undefined){
+			if(window.TOKEN_OBJECTS[auraId].options.devilsight.color !== undefined)
+				devilsightColor =  window.TOKEN_OBJECTS[auraId].options.devilsight.color;
+
+			if(window.TOKEN_OBJECTS[auraId].options.devilsight.feet !== undefined)
+				devilsightRange = window.TOKEN_OBJECTS[auraId].options.devilsight.feet;
+		}
+		if(window.TOKEN_OBJECTS[auraId].options.truesight !== undefined){
+			if(window.TOKEN_OBJECTS[auraId].options.truesight.color !== undefined)
+				truesightColor =  window.TOKEN_OBJECTS[auraId].options.truesight.color;
+
+			if(window.TOKEN_OBJECTS[auraId].options.truesight.feet !== undefined)
+				truesightRange = window.TOKEN_OBJECTS[auraId].options.truesight.feet;
 		}
 		if(window.TOKEN_OBJECTS[auraId].options.light1 !== undefined){
 			if(window.TOKEN_OBJECTS[auraId].options.light1.color !== undefined)
@@ -8477,22 +8537,31 @@ function clipped_light(auraId, maskPolygon, playerTokenId, canvasWidth = getScen
 	if(visionColor.match(/rgba\(0, 0, 0.*/g) !== null)
 		blackVision = 0;
 
+	if(devilsightColor.match(/rgba\(0, 0, 0.*/g) !== null)
+		blackDevilsight = 0;
 
-	let lightRadius = ((parseFloat(light1Range) * blackLight1) + (parseFloat(light2Range)*blackLight2))*window.CURRENT_SCENE_DATA.hpps/window.CURRENT_SCENE_DATA.fpsq 
+	if(truesightColor.match(/rgba\(0, 0, 0.*/g) !== null)
+		blackTruesight = 0;
+
+
+	const lightRadius = ((parseFloat(light1Range) * blackLight1) + (parseFloat(light2Range)*blackLight2))*window.CURRENT_SCENE_DATA.hpps/window.CURRENT_SCENE_DATA.fpsq 
 	let darkvisionRadius = parseFloat(visionRange)*window.CURRENT_SCENE_DATA.hpps/window.CURRENT_SCENE_DATA.fpsq*blackVision;
-	
+	let devilsightRadius = parseFloat(devilsightRange)*window.CURRENT_SCENE_DATA.hpps/window.CURRENT_SCENE_DATA.fpsq*blackDevilsight;
+	let truesightRadius = parseFloat(truesightRange)*window.CURRENT_SCENE_DATA.hpps/window.CURRENT_SCENE_DATA.fpsq*blackTruesight;
+
+
 	const selectedTokenCheck = numberOfSharedVisionTokens == 0 || (window.SelectedTokenVision !== true || window.CURRENTLY_SELECTED_TOKENS.includes(auraId) || window.CURRENTLY_SELECTED_TOKENS.length===0)
 
 	let circleRadius = 0
-
-	if(lightRadius > darkvisionRadius)
-		circleRadius = lightRadius;
-	else if (selectedTokenCheck === true && (window.DM === true || window.TOKEN_OBJECTS[auraId].options.share_vision === true || window.TOKEN_OBJECTS[auraId].options.share_vision == window.myUser || (window.TOKEN_OBJECTS[auraId].options.share_vision && is_spectator_page()) || auraId.includes(window.PLAYER_ID) || (window.TOKEN_OBJECTS[auraId].options.itemType === 'pc' && playerTokenId === undefined)))
-		circleRadius = darkvisionRadius;
-	else if(lightRadius > 0)
+	const largest = Math.max(lightRadius, darkvisionRadius, devilsightRadius, truesightRadius);
+	if (selectedTokenCheck === true && (window.DM === true || window.TOKEN_OBJECTS[auraId].options.share_vision === true || window.TOKEN_OBJECTS[auraId].options.share_vision == window.myUser || (window.TOKEN_OBJECTS[auraId].options.share_vision && is_spectator_page()) || auraId.includes(window.PLAYER_ID) || (window.TOKEN_OBJECTS[auraId].options.itemType === 'pc' && playerTokenId === undefined)))
+		circleRadius = largest;
+	else if(lightRadius >= 0)
 		circleRadius = lightRadius;
 	
 	darkvisionRadius += (window.TOKEN_OBJECTS[auraId].options.size / 2);
+	devilsightRadius += (window.TOKEN_OBJECTS[auraId].options.size / 2);
+	truesightRadius += (window.TOKEN_OBJECTS[auraId].options.size / 2);
 	let horizontalTokenMiddle = (parseInt(window.TOKEN_OBJECTS[auraId].options.left) + (window.TOKEN_OBJECTS[auraId].options.size / 2));
 	let verticalTokenMiddle = (parseInt(window.TOKEN_OBJECTS[auraId].options.top) + (window.TOKEN_OBJECTS[auraId].options.size / 2));
 	if(window.TOKEN_OBJECTS[auraId].options.type == 'door' && window.TOKEN_OBJECTS[auraId].options.scaleCreated){
@@ -8504,7 +8573,7 @@ function clipped_light(auraId, maskPolygon, playerTokenId, canvasWidth = getScen
 			delete window.lightAuraClipPolygon[auraId];
 			return; // remove 0 range light and return
 		}
-		if(!window.SelectedTokenVision && window.lightAuraClipPolygon[auraId].numberOfWalls == walls.length+darknessBoundarys.length+tokenWalls.length && window.lightAuraClipPolygon[auraId].light == lightRadius && window.lightAuraClipPolygon[auraId].darkvision == darkvisionRadius && window.lightAuraClipPolygon[auraId].middle.x == horizontalTokenMiddle && window.lightAuraClipPolygon[auraId].middle.y == verticalTokenMiddle)
+		if(!window.SelectedTokenVision && window.lightAuraClipPolygon[auraId].numberOfWalls == walls.length+darknessBoundarys.length+tokenWalls.length && window.lightAuraClipPolygon[auraId].light == lightRadius && window.lightAuraClipPolygon[auraId].devilsight == devilsightRadius && window.lightAuraClipPolygon[auraId].truesight == truesightRadius && window.lightAuraClipPolygon[auraId].darkvision == darkvisionRadius && window.lightAuraClipPolygon[auraId].middle.x == horizontalTokenMiddle && window.lightAuraClipPolygon[auraId].middle.y == verticalTokenMiddle)
 			return; // token settings and position have not changed - a lot of light will be stationary do not redraw checker canvas
 	}
 	else if(circleRadius === 0){
@@ -8516,6 +8585,8 @@ function clipped_light(auraId, maskPolygon, playerTokenId, canvasWidth = getScen
 	window.lightAuraClipPolygon[auraId] = {
 		light: lightRadius,
 		darkvision: darkvisionRadius,
+		devilsight: devilsightRadius,
+		truesight: truesightRadius,
 		light1: {
 			range: light1Range > 0 ? light1Range * window.CURRENT_SCENE_DATA.hpps / window.CURRENT_SCENE_DATA.fpsq + (window.TOKEN_OBJECTS[auraId].options.size / 2) : 0,
 			color: light1Color
@@ -8527,6 +8598,14 @@ function clipped_light(auraId, maskPolygon, playerTokenId, canvasWidth = getScen
 		vision: {
 			range: darkvisionRadius,
 			color: visionColor
+		},
+		devilsightVision: {
+			range: devilsightRadius,
+			color: devilsightColor
+		},
+		truesightVision: {
+			range: darkvisionRadius,
+			color: truesightColor
 		},
 		middle: {
 			x: horizontalTokenMiddle,

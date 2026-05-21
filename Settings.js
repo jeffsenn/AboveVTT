@@ -496,10 +496,14 @@ function avtt_settings() {
 								delete window.TOKEN_SETTINGS[name];
 							}
 						}, function() {
-							let visionInput = $("input[name='visionColor']").spectrum("get");
-			   				let light1Input = $("input[name='light1Color']").spectrum("get");
-			    			let light2Input = $("input[name='light2Color']").spectrum("get");
-			        		
+							const devilsightInput = $("input[name='devilsightColor']").spectrum("get");
+							const truesightInput = $("input[name='truesightColor']").spectrum("get");
+							const visionInput = $("input[name='visionColor']").spectrum("get");
+			   				const light1Input = $("input[name='light1Color']").spectrum("get");
+			    			const light2Input = $("input[name='light2Color']").spectrum("get");
+
+			        		window.TOKEN_SETTINGS.devilsight.color= `rgba(${devilsightInput._r}, ${devilsightInput._g}, ${devilsightInput._b}, ${devilsightInput._a})`;
+							window.TOKEN_SETTINGS.truesight.color= `rgba(${truesightInput._r}, ${truesightInput._g}, ${truesightInput._b}, ${truesightInput._a})`;
 			        		window.TOKEN_SETTINGS.vision.color= `rgba(${visionInput._r}, ${visionInput._g}, ${visionInput._b}, ${visionInput._a})`;
 			   				window.TOKEN_SETTINGS.light1.color = `rgba(${light1Input._r}, ${light1Input._g}, ${light1Input._b}, ${light1Input._a})`;
 			    			window.TOKEN_SETTINGS.light2.color = `rgba(${light2Input._r}, ${light2Input._g}, ${light2Input._b}, ${light2Input._a})`;
@@ -667,6 +671,18 @@ function avtt_settings() {
 		defaultValue: false,
 		class: 'ui',
 		global: 1
+	})
+	settings.push({
+		name: 'sidebarWidth',
+		label: 'Sidebar Width',
+		type: 'rangeInput',
+		options: [
+			{ min: 340, max: 600, step: 10, description: "Width of the sidebar panel in pixels" },
+		],
+		defaultValue: 340,
+		class: 'ui',
+		global: 1,
+		hiddenSetting: true
 	})
 	
 	settings.push(
@@ -1007,6 +1023,9 @@ function set_avtt_setting_value(name, newValue) {
 		case "projector":
 			$('#projector_toggle, #projector_zoom_lock').toggleClass('enabled', newValue);
 			break;
+		case "sidebarWidth":
+			apply_sidebar_width(newValue);
+			break;
 		case "receiveCursorFromPeers":
 		case "receiveRulerFromPeers":
 			local_peer_setting_changed(name, newValue);
@@ -1089,7 +1108,7 @@ function b64DecodeUnicode(str) {
 
 
 
-function download(data, filename, type) {
+function download(data, filename, type, appendTo = document.body) {
     let file = new Blob([data], {type: type});
     if (window.navigator.msSaveOrOpenBlob) // IE10+
         window.navigator.msSaveOrOpenBlob(file, filename);
@@ -1098,10 +1117,11 @@ function download(data, filename, type) {
                 url = URL.createObjectURL(file);
         a.href = url;
         a.download = filename;
-        document.body.appendChild(a);
+		a.id = 'downloadAvttExportLink'
+        $(appendTo).append(a);
         a.click();
         setTimeout(function() {
-            document.body.removeChild(a);
+            $('#downloadAvttExportLink').remove();
             window.URL.revokeObjectURL(url);
         }, 0);
     }
@@ -1141,7 +1161,7 @@ function init_settings() {
 					<input accept='.abovevtt' id='input_file' type='file' multiple style='display: none' />
 				</div>
 				<div id='export_current_scene_container'>
-					<button id='export_current_scene' onclick='export_current_scene();' class="sidebar-panel-footer-button sidebar-hover-text" data-hover="Download a file containing the current scene data including token notes">EXPORT CURRENT SCENE ONLY</button>
+					<button id='export_current_scene' onclick='export_current_scene();' class="sidebar-panel-footer-button sidebar-hover-text" data-hover="Download a file containing the current scene data including token notes">EXPORT CURRENT SCENE</button>
 				</div>
 				<div id='recover_scenes_container'>
 		<button id='recover_scenes' onclick='recover_scenes();' class="sidebar-panel-footer-button sidebar-hover-text" data-hover="Attempt Scene recovery from older campaign invite link"> Recover Scenes</button>
@@ -1177,7 +1197,7 @@ function init_settings() {
 	`);
 	for(let i = 0; i < experimental_features.length; i++) {	
 		let setting = experimental_features[i];
-		if (setting.dmOnly === true && !window.DM) {
+		if ((setting.dmOnly === true && !window.DM) || setting.hiddenSetting === true) {
 			continue;
 		}
 		let currentValue = get_avtt_setting_value(setting.name);
@@ -1235,6 +1255,11 @@ function init_settings() {
 				break;
 			case "customButton":
 				inputWrapper = build_custom_button_input(setting);
+				break;
+			case "rangeInput":
+				inputWrapper = build_rangeInput_input(setting, currentValue, function(_name, newValue){
+					set_avtt_setting_value(setting.name, newValue);
+				})
 				break;
 		}
 		if (inputWrapper) {
@@ -1458,18 +1483,33 @@ function build_sidebar_token_options_flyout(availableOptions, setValues, updateV
 
 
 	if(showExtraOptions){
-		
+		window.TOKEN_SETTINGS.truesight = (window.TOKEN_SETTINGS?.truesight) ? window.TOKEN_SETTINGS.truesight : {color: 'rgba(142, 142, 142, 1)'};
+		window.TOKEN_SETTINGS.devilsight = (window.TOKEN_SETTINGS?.devilsight) ? window.TOKEN_SETTINGS.devilsight : {color: 'rgba(142, 142, 142, 1)'};
 	    window.TOKEN_SETTINGS.vision = (window.TOKEN_SETTINGS?.vision) ? window.TOKEN_SETTINGS.vision : {color: 'rgba(142, 142, 142, 1)'};
 	    window.TOKEN_SETTINGS.light1 = (window.TOKEN_SETTINGS?.light1) ? window.TOKEN_SETTINGS.light1 : {color: 'rgba(255, 255, 255, 1)'};
 	   	window.TOKEN_SETTINGS.light2 = (window.TOKEN_SETTINGS?.light2) ? window.TOKEN_SETTINGS.light2 : {color: 'rgba(142, 142, 142, 1)'};
 	
 
 	    let lightInputs = `<div class="token-image-modal-footer-select-wrapper">
-	                    <div class="token-image-modal-footer-title">Darkvision Color</div>
+					<div class="token-image-modal-footer-title">Darkvision Color</div>
 	                    <div style="padding-left: 2px">
 	                        <input class="spectrum" name="visionColor" value="${window.TOKEN_SETTINGS.vision.color}" >
 	                    </div>
 	                </div>
+					<div class="token-image-modal-footer-select-wrapper">
+						<div class="token-image-modal-footer-title">Devilsight Color</div>
+							<div style="padding-left: 2px">
+								<input class="spectrum" name="devilsightColor" value="${window.TOKEN_SETTINGS.devilsight.color}" >
+							</div>
+						</div>
+					</div>
+					<div class="token-image-modal-footer-select-wrapper">
+						<div class="token-image-modal-footer-title">True Color</div>
+							<div style="padding-left: 2px">
+								<input class="spectrum" name="truesightColor" value="${window.TOKEN_SETTINGS.truesight.color}" >
+							</div>
+						</div>
+					</div>
 	                <div class="token-image-modal-footer-select-wrapper">
 	                    <div class="token-image-modal-footer-title">Inner Light Color</div>
 	                    <div style="padding-left: 2px">
@@ -1493,6 +1533,8 @@ function build_sidebar_token_options_flyout(availableOptions, setValues, updateV
 	        clickoutFiresChange: true,
 	        appendTo: "parent"
 	    });
+		container.find("input[name='devilsightColor']").spectrum("set", window.TOKEN_SETTINGS.devilsight.color);
+		container.find("input[name='truesightColor']").spectrum("set", window.TOKEN_SETTINGS.truesight.color);
 		container.find("input[name='visionColor']").spectrum("set", window.TOKEN_SETTINGS.vision.color);
 	    container.find("input[name='light1Color']").spectrum("set", window.TOKEN_SETTINGS.light1.color);
 	    container.find("input[name='light2Color']").spectrum("set", window.TOKEN_SETTINGS.light2.color);
@@ -1552,15 +1594,17 @@ function build_sidebar_token_options_flyout(availableOptions, setValues, updateV
 
 			let defaultTokenOptions = default_options();
 
-			if(showExtraOptions == true){
-				$("input[name='visionColor']").spectrum("set", defaultTokenOptions.light2.color);
+			if(showExtraOptions == true){	
 			    $("input[name='light1Color']").spectrum("set", defaultTokenOptions.light1.color);
-			    $("input[name='light2Color']").spectrum("set", defaultTokenOptions.light2.color);
+			    $("input[name='light2Color'], input[name='visionColor'], input[name='devilsightColor'], input[name='truesightColor']").spectrum("set", defaultTokenOptions.light2.color);
 			}
 			else{
+				$("input[name='devilsightColor']").spectrum("set", ((window.TOKEN_SETTINGS?.devilsight?.color) ? window.TOKEN_SETTINGS.devilsight.color : defaultTokenOptions.light2.color));
+				$("input[name='truesightColor']").spectrum("set", ((window.TOKEN_SETTINGS?.truesight?.color) ? window.TOKEN_SETTINGS.truesight.color : defaultTokenOptions.light2.color));
 				$("input[name='visionColor']").spectrum("set", ((window.TOKEN_SETTINGS?.vision?.color) ? window.TOKEN_SETTINGS.vision.color : defaultTokenOptions.light2.color));
 			    $("input[name='light1Color']").spectrum("set", ((window.TOKEN_SETTINGS?.light1?.color) ? window.TOKEN_SETTINGS.light1.color : defaultTokenOptions.light1.color));
 			    $("input[name='light2Color']").spectrum("set", ((window.TOKEN_SETTINGS?.light2?.color) ? window.TOKEN_SETTINGS.light2.color : defaultTokenOptions.light2.color));
+				
 			}
 
 
@@ -2034,7 +2078,7 @@ function export_audio_csv() {
 
 
 
-function export_file(filePrefix="", saveDateStamp=false) {
+function export_file(downloadAppendTo) {
 	build_import_loading_indicator('Preparing Export File');
 	const DataFile = {
 		version: 2,
@@ -2046,7 +2090,7 @@ function export_file(filePrefix="", saveDateStamp=false) {
 	};
 	const currentdate = new Date(); 
 	const datetime = `${currentdate.getFullYear()}-${(currentdate.getMonth()+1)}-${currentdate.getDate()}`
-	const filename = `${filePrefix}${window.CAMPAIGN_INFO.name}-${datetime}.abovevtt`;
+	const filename = `${window.CAMPAIGN_INFO.name}-${datetime}.abovevtt`;
 	const storageKey = `AVTT-exportStamp-${window.CAMPAIGN_INFO.id}`;
 	let firstError = false;
 	return AboveApi.exportScenes()
@@ -2058,7 +2102,7 @@ function export_file(filePrefix="", saveDateStamp=false) {
 			DataFile.soundpads = window.SOUNDPADS;
 			DataFile.mixerstate = window.MIXER.state();
 			DataFile.tracklibrary = Array.from(window.TRACK_LIBRARY.map().entries());
-			download(b64EncodeUnicode(JSON.stringify(DataFile,null,"\t")),filename,"text/plain");
+			download(b64EncodeUnicode(JSON.stringify(DataFile,null,"\t")),filename,"text/plain", downloadAppendTo);
 			localStorage.setItem(storageKey, Date.now().toString())
 			return true;
 		})
@@ -2073,7 +2117,7 @@ function export_file(filePrefix="", saveDateStamp=false) {
 				DataFile.soundpads = window.SOUNDPADS;
 				DataFile.mixerstate = window.MIXER.state();
 				DataFile.tracklibrary = Array.from(window.TRACK_LIBRARY.map().entries());
-				download(b64EncodeUnicode(JSON.stringify(DataFile,null,"\t")),filename,"text/plain");
+				download(b64EncodeUnicode(JSON.stringify(DataFile,null,"\t")),filename,"text/plain", downloadAppendTo);
 				$(".import-loading-indicator").remove();
 				localStorage.setItem(storageKey, Date.now().toString());	
 				return true;				

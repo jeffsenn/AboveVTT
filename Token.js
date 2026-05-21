@@ -894,7 +894,7 @@ class Token {
 			
 			if(!dontscroll){
 				if($("#hide_rightpanel").hasClass("point-right")) {
-   					pageX += 190; // 190 = half gamelog + scrollbar
+   					pageX += (get_sidebar_width() / 2 + 20); // half sidebar + scrollbar offset
    				}
 				$("html,body").animate({
 					scrollTop: pageY + window.VTTMargin,
@@ -1333,7 +1333,9 @@ class Token {
 					window.TOKEN_OBJECTS[tokenID].update_and_sync()
 				}
 			});
-			hp_input.on('click', function(e) {
+			hp_input.on('mouseup', function(e) {
+				e.preventDefault();
+				e.stopPropagation();
 				$(e.target).select();
 			});
 			maxhp_input.change(function(e) {
@@ -1347,7 +1349,9 @@ class Token {
 					window.TOKEN_OBJECTS[tokenID].update_and_sync()
 				}
 			});
-			maxhp_input.on('click', function(e) {
+			maxhp_input.on('mouseup', function(e) {
+				e.preventDefault();
+				e.stopPropagation();
 				$(e.target).select();
 			});
 		}
@@ -2108,7 +2112,7 @@ class Token {
 			const tokMidLeft = Math.round(tokenX) + parseFloat(token.sizeWidth())/2
 			const tokMidTop = Math.round(tokenY) + parseFloat(token.sizeHeight())/2
 			const idReplaced = token.options.id.replaceAll("/", "");
-			let selEl = $(`#aura_${idReplaced}, #light_${idReplaced}, #vision_${idReplaced}, [data-darkness='darkness_${idReplaced}']`);
+			let selEl = $(`#aura_${idReplaced}, #light_${idReplaced}, #vision_${idReplaced}, #vision_devilsight_${idReplaced}, #vision_truesight_${idReplaced}, [data-darkness='darkness_${idReplaced}']`);
 			selEl.each((i, el) => {
 				const $el = $(el);
 				const selElWidth = parseFloat($el.css('width')) / 2;
@@ -2133,6 +2137,84 @@ class Token {
 			return false;
 		}			
 	}	
+	assignLightVisionOptions(){
+		if(this.options.light1?.feet == undefined){
+			this.options.light1 ={
+				feet: 0,
+				color: (window.TOKEN_SETTINGS?.light1?.color) ? window.TOKEN_SETTINGS.light1.color : 'rgba(255, 255, 255, 1)'
+			}
+		}
+		if(this.options.light2?.feet == undefined){
+			this.options.light2 = {
+				feet: 0,
+				color: (window.TOKEN_SETTINGS?.light2?.color) ? window.TOKEN_SETTINGS.light2.color : 'rgba(142, 142, 142, 1)'
+			}
+		}
+
+
+		let vision = {
+			darkvision: 0,
+			devilsight: 0,
+			truesight: 0
+		}
+
+		if(this.isPlayer()){		
+			let pcData = find_pc_by_player_id(this.options.id, false);
+			if(pcData && pcData.senses.length > 0) {
+					const pcSenses = {
+						darkvision: "darkvision",
+						tremorsense: "darkvision",
+						blindsight: "truesight",
+						truesight: "truesight"
+					}
+					for(let i=0; i < pcData.senses.length; i++){
+						const name = pcData.senses[i].name?.toLowerCase();
+						const ftPosition = pcData.senses[i].distance.indexOf('ft.');
+						const range = parseInt(pcData.senses[i].distance.slice(0, ftPosition));
+						if(range > vision[pcSenses[name]])
+							vision[pcSenses[name]] = range;
+					}
+			}
+		}
+		else if(this.isMonster()){
+				if(window.monsterListItems){
+					let monsterSidebarListItem = this.options.monster == "open5e" ? window.open5eListItems.filter((d) => this.options.itemId == d.id)[0] : window.monsterListItems.filter((d) => this.options.monster == d.id)[0] ;	
+					if(!monsterSidebarListItem){
+						for(let i in encounter_monster_items){
+							if(encounter_monster_items[i].some((d) => this.options.monster == d.id)){
+								monsterSidebarListItem = encounter_monster_items[i].filter((d) => this.options.monster == d.id)[0]
+								break;
+							}
+						}
+					}
+					
+					if(monsterSidebarListItem){
+						vision = get_monster_senses(monsterSidebarListItem.monsterData.senses)
+					}
+				} 
+		}
+
+		if(this.options.vision?.feet == undefined){
+			this.options.vision = {
+				feet: vision.darkvision.toString(),
+				color: (window.TOKEN_SETTINGS?.vision?.color) ? window.TOKEN_SETTINGS.vision.color : 'rgba(142, 142, 142, 1)'
+			}
+		}
+		if(this.options.truesight?.feet == undefined){
+			this.options.truesight = {
+				feet: vision.truesight.toString(),
+				color: (window.TOKEN_SETTINGS?.truesight?.color) ? window.TOKEN_SETTINGS.truesight.color : 'rgba(142, 142, 142, 1)'
+			}
+		}
+		if(this.options.devilsight?.feet == undefined){
+			this.options.devilsight = {
+				feet: vision.devilsight.toString(),
+				color: (window.TOKEN_SETTINGS?.devilsight?.color) ? window.TOKEN_SETTINGS.devilsight.color : 'rgba(142, 142, 142, 1)'
+			}
+		}
+		
+
+	}
 	place(animationDuration) {
 		try{
 			if(!this.options.id.includes('exampleToken') && (isNaN(parseFloat(this.options.left)) || isNaN(parseInt(this.options.top)))){// prevent errors with NaN positioned tokens - delete them as catch all. 
@@ -2179,12 +2261,18 @@ class Token {
 			else{
 				old.removeAttr('data-group-id')
 			}		
-
+			this.assignLightVisionOptions();
 			if (old.length > 0) {
 				const hasDraggable = old.hasClass('ui-draggable');
 				
 				if(this.options.type == 'door'){
 					this.options.size = 50;
+					if (this.options.name) {
+						old.attr("data-name", this.options.name);
+					}else{
+						old.removeAttr("data-name")
+					}
+					old.attr("data-always-show-name", this.options.alwaysshowname && this.options.name?.length>0);				
 					setTokenLight(old, this.options);
 					redraw_light();
 					door_note_icon(this.options.id);
@@ -2563,24 +2651,7 @@ class Token {
 						this.options.restrictPlayerMove = false;
 					}
 				}
-				if(this.options.light1 == undefined){
-					this.options.light1 ={
-						feet: 0,
-						color: 'rgba(255, 255, 255, 1)'
-					}
-				}
-				if(this.options.light2 == undefined){
-					this.options.light2 = {
-						feet: 0,
-						color: 'rgba(142, 142, 142, 1)'
-					}
-				}
-				if(this.options.vision == undefined){
-					this.options.vision = {
-						feet: 60,
-						color: 'rgba(142, 142, 142, 1)'
-					}
-				}
+
 				if((!window.DM && this.options.restrictPlayerMove && !this.isCurrentPlayer() && this.options.share_vision != true &&  this.options.share_vision != window.myUser) || this.options.locked){
 					if(!window.DM || (window.DM && !$('#select_locked>div.ddbc-tab-options__header-heading').hasClass('ddbc-tab-options__header-heading--is-active'))){
 						if (hasDraggable) old.draggable("disable");
@@ -2760,9 +2831,15 @@ class Token {
 				let fs = Math.floor(bar_height / 1.3) + "px";
 				tok.css("font-size",fs);
 				let tokenMultiplierAdjustment = (window.CURRENT_SCENE_DATA?.scaleAdjustment?.x > window.CURRENT_SCENE_DATA?.scaleAdjustment?.y) ? window.CURRENT_SCENE_DATA.scaleAdjustment.x : (window.CURRENT_SCENE_DATA?.scaleAdjustment?.y) ? window.CURRENT_SCENE_DATA.scaleAdjustment.y : 1;
-				
+
 				if(this.options.type == 'door'){
 					this.options.size = 50;
+					if (this.options.name) {
+						tok.attr("data-name", this.options.name);
+					}else{
+						tok.removeAttr("data-name")
+					}		
+					tok.attr("data-always-show-name", this.options.alwaysshowname && this.options.name?.length>0);				
 					setTokenLight(tok, this.options);
 					redraw_light();
 					door_note_icon(this.options.id);
@@ -2776,72 +2853,6 @@ class Token {
 				}
 				if(this.options.groupId != undefined)
 					tok.attr('data-group-id', this.options.groupId)
-				if(this.options.light1?.feet == undefined){
-					this.options.light1 ={
-						feet: 0,
-						color: (window.TOKEN_SETTINGS?.light1?.color) ? window.TOKEN_SETTINGS.light1.color : 'rgba(255, 255, 255, 1)'
-					}
-				}
-				if(this.options.light2?.feet == undefined){
-					this.options.light2 = {
-						feet: 0,
-						color: (window.TOKEN_SETTINGS?.light2?.color) ? window.TOKEN_SETTINGS.light2.color : 'rgba(142, 142, 142, 1)'
-					}
-				}
-				if(this.options.vision?.feet == undefined){
-					if(this.isPlayer()){
-			            let pcData = find_pc_by_player_id(this.options.id, false);
-			            let darkvision = 0;
-			            if(pcData && pcData.senses.length > 0) {
-				                for(let i=0; i < pcData.senses.length; i++){
-				                    const ftPosition = pcData.senses[i].distance.indexOf('ft.');
-				                    const range = parseInt(pcData.senses[i].distance.slice(0, ftPosition));
-				                    if(range > darkvision)
-				                        darkvision = range;
-				                }
-				        }
-			            this.options.vision = {
-			                feet: darkvision.toString(),
-			                color: (window.TOKEN_SETTINGS?.vision?.color) ? window.TOKEN_SETTINGS.vision.color : 'rgba(142, 142, 142, 1)'
-			            }
-			        }
-			        else if(this.isMonster()){
-			            let darkvision = 0;
-			            if(window.monsterListItems){
-			            	let monsterSidebarListItem = this.options.monster == "open5e" ? window.open5eListItems.filter((d) => this.options.itemId == d.id)[0] : window.monsterListItems.filter((d) => this.options.monster == d.id)[0] ;	
-			            	if(!monsterSidebarListItem){
-								for(let i in encounter_monster_items){
-								    if(encounter_monster_items[i].some((d) => this.options.monster == d.id)){
-								        monsterSidebarListItem = encounter_monster_items[i].filter((d) => this.options.monster == d.id)[0]
-								        break;
-								    }
-								}
-							}
-			                   
-							if(monsterSidebarListItem){
-					            if(monsterSidebarListItem.monsterData.senses.length > 0){
-					                for(let i=0; i < monsterSidebarListItem.monsterData.senses.length; i++){
-					                    const ftPosition = monsterSidebarListItem.monsterData.senses[i].notes.indexOf('ft.')
-					                    const range = parseInt(monsterSidebarListItem.monsterData.senses[i].notes.slice(0, ftPosition));
-					                    if(range > darkvision)
-					                        darkvision = range;
-					                }
-					            }
-				       		}
-			       		} 
-			            this.options.vision = {
-			                feet: darkvision.toString(),
-			                color: (window.TOKEN_SETTINGS?.vision?.color) ? window.TOKEN_SETTINGS.vision.color : 'rgba(142, 142, 142, 1)'
-			            }
-			        }
-					else{
-						this.options.vision = {
-							feet: 60,
-							color: (window.TOKEN_SETTINGS?.vision?.color) ? window.TOKEN_SETTINGS.vision.color : 'rgba(142, 142, 142, 1)'
-						}
-					
-					}
-				}
 
 				if(this.options.reveal_light != undefined){
 					if(this.options.reveal_light == 'always' || this.options.reveal_light == true){
@@ -3185,7 +3196,7 @@ class Token {
 							
 							const setDataPos = (id) =>{
 								const idReplaced = id.replaceAll("/", "");
-								let selEl = $(`#aura_${idReplaced}, #light_${idReplaced}, #vision_${idReplaced}, [data-darkness='darkness_${idReplaced}']`);
+								let selEl = $(`#aura_${idReplaced}, #light_${idReplaced}, #vision_${idReplaced}, #vision_devilsight_${idReplaced}, #vision_truesight_${idReplaced}, [data-darkness='darkness_${idReplaced}']`);
 								selEl.each((i, el) => {
 									const $el = $(el);
 									$el.attr({
@@ -3686,7 +3697,7 @@ function default_options() {
 function center_of_view() {
 	let centerX = (window.innerWidth/2) + window.scrollX 
 	if($("#hide_rightpanel").hasClass("point-right")) {
-    centerX = centerX - 190; // 190 = half gamelog + scrollbar
+    centerX = centerX - (get_sidebar_width() / 2 + 20); // half sidebar + scrollbar offset
   }
 	let centerY = (window.innerHeight/2) + window.scrollY - 20 // 20 = scrollbar
 	return { x: centerX, y: centerY };
@@ -4308,19 +4319,23 @@ function setTokenLight (token, options) {
 	const playerNoVision = options.id != playerTokenId && options.share_vision != true && options.share_vision != window.myUser && !(options.share_vision && is_spectator_page())
 	const playerNoTokenIsPc = playerTokenId == undefined && options.itemType == 'pc'
 	const zeroLight = (options.light1?.feet == 0 && options.light2?.feet == 0) || (!options.light1?.feet && !options.light2?.feet)
-	const zeroVision = options.vision?.feet == 0 || !options.vision?.feet;
-
+	const zeroVision = (options.vision?.feet == 0 || !options.vision?.feet) && (options.devilsight?.feet == 0 || !options.devilsight?.feet)&& (options.truesight?.feet == 0 || !options.truesight?.feet);
+	const tokenGrandparent = token.parent().parent();
 	if ((window.DM && zeroLight && zeroVision) || 
 			(!window.DM && playerNoVision && !playerNoTokenIsPc && zeroLight) || 
 			window.CURRENT_SCENE_DATA.disableSceneVision == true || 
 			options.id.includes('exampleToken')) {
-		token.parent().parent().find(`.aura-element-container-clip[id='${options.id}']`).parent().remove();
+		tokenGrandparent.find(`.aura-element-container-clip[id='${options.id}']`).parent().remove();
 		return;
 	} 
 	const innerlightSize = options.light1.feet != undefined ? (options.light1.feet / parseFloat(window.CURRENT_SCENE_DATA.fpsq)) * window.CURRENT_SCENE_DATA.hpps/window.CURRENT_SCENE_DATA.scale_factor  : 0;
 	const outerlightSize = options.light2.feet != undefined ? (options.light2.feet / parseFloat(window.CURRENT_SCENE_DATA.fpsq)) * window.CURRENT_SCENE_DATA.hpps/window.CURRENT_SCENE_DATA.scale_factor  : 0;
 	const visionSize = options.vision.feet != undefined ? (options.vision.feet / parseFloat(window.CURRENT_SCENE_DATA.fpsq)) * window.CURRENT_SCENE_DATA.hpps/window.CURRENT_SCENE_DATA.scale_factor  : 0;
+	const devilsightSize = options.devilsight?.feet != undefined ? (options.devilsight.feet / parseFloat(window.CURRENT_SCENE_DATA.fpsq)) * window.CURRENT_SCENE_DATA.hpps/window.CURRENT_SCENE_DATA.scale_factor : 0;
+	const truesightSize = options.truesight?.feet != undefined ? (options.truesight.feet / parseFloat(window.CURRENT_SCENE_DATA.fpsq)) * window.CURRENT_SCENE_DATA.hpps/window.CURRENT_SCENE_DATA.scale_factor : 0;
+	
 	const tokenId = options.id.replaceAll("/", "").replaceAll('.', '');
+	let tokenVisionLightContainer = tokenGrandparent.find(".aura-element-container-clip[id='" + options.id +"']");
 	if (options.auraislight) {
 
 		const isDoor = options.type == 'door';
@@ -4400,13 +4415,72 @@ function setTokenLight (token, options) {
 							--rotation: ${options.rotation}deg;
 							`;
 		
-
+		const devilsightRadius = devilsightSize ? (devilsightSize + (optionsSize / 2)) : 0;
+	
+		const devilsightBg = `radial-gradient(${options.devilsight.color ? options.devilsight.color : `rgba(142, 142, 142, 1)`} ${devilsightRadius}px, #00000000 ${devilsightRadius}px)`;
+		const totalDevilsightSize = optionsSize + (2 * devilsightSize);
+		const devilsightAbsPosOffset = (optionsSize - totalDevilsightSize) / 2;
+		const devilsightStyles = `width:${totalDevilsightSize }px;
+							height:${totalDevilsightSize}px;
+							left:${devilsightAbsPosOffset}px;
+							top:${devilsightAbsPosOffset}px;
+							background-image:${devilsightBg};
+							left:${optionsLeft + devilsightAbsPosOffset}px;
+							top:${optionsTop + devilsightAbsPosOffset}px;
+							--vision-radius: ${devilsightRadius}px;
+							--vision-color: ${options.devilsight.color};
+							--rotation: ${options.rotation}deg;
+							`;
 		
+		const truesightRadius = truesightSize ? (truesightSize + (optionsSize / 2)) : 0;
+		const truesightBg = `radial-gradient(${options.truesight.color ? options.truesight.color : `rgba(142, 142, 142, 1)`} ${truesightRadius}px, #00000000 ${truesightRadius}px)`;
+		const totaltruesightSize = optionsSize + (2 * truesightSize);
+		const truesightAbsPosOffset = (optionsSize - totaltruesightSize) / 2;
+		const truesightStyles = `width:${totaltruesightSize }px;
+							height:${totaltruesightSize }px;
+							left:${truesightAbsPosOffset}px;
+							top:${truesightAbsPosOffset}px;
+							background-image:${truesightBg};
+							left:${optionsLeft + truesightAbsPosOffset}px;
+							top:${optionsTop + truesightAbsPosOffset}px;
+							--vision-radius: ${truesightRadius}px;
+							--vision-color: ${options.truesight.color};
+							--rotation: ${options.rotation}deg;
+							`;
 
-		token.parent().parent().find(".aura-element-container-clip[id='" + options.id+"']").parent().remove();
+	
+
+		tokenGrandparent.find(".aura-element-container-clip[id='" + options.id+"']").parent().remove();
 
 
-		const lightElement = options.sight == 'devilsight' || options.sight == 'truesight' ? $(`<div class='aura-clip-container'><div class='aura-element-container-clip light' style='clip-path: ${clippath};' id='${options.id}'><div class='aura-element' id="light_${tokenId}" data-id='${options.id}' style='${lightStyles}'></div></div></div><div class='aura-clip-container vision'><div class='aura-element-container-clip vision' style='clip-path: ${devilsightClip};' id='${options.id}'><div class='aura-element darkvision' id="vision_${tokenId}" data-id='${options.id}' style='${visionStyles}'></div></div></div>`) : $(`<div class='aura-clip-container'><div class='aura-element-container-clip light' style='clip-path: ${clippath};' id='${options.id}'><div class='aura-element' id="light_${tokenId}" data-id='${options.id}' style='${lightStyles}'></div><div class='aura-element darkvision' id="vision_${tokenId}" data-id='${options.id}' style='${visionStyles}'></div></div></div>`) 
+		const lightElement = $(`
+			<div class='aura-clip-container'>
+				<div class='aura-element-container-clip light' style='clip-path: ${clippath};' id='${options.id}'>
+					<div class='aura-element' id="light_${tokenId}" data-id='${options.id}' style='${lightStyles}'></div>
+				</div>
+				
+
+			</div>
+			<div class='aura-clip-container vision'>
+				<div class='aura-element-container-clip vision darkvision' style='clip-path: ${clippath};' id='${options.id}'>
+					<div class='aura-element darkvision' id="vision_${tokenId}" data-id='${options.id}' style='${visionStyles}'></div>
+				</div>
+			</div>
+			<div class='aura-clip-container devilsight vision'>
+				${parseInt(options.devilsight.feet) > 0 ? `
+					<div class='aura-element-container-clip vision devilsight' style='clip-path: ${devilsightClip};' id='${options.id}'>
+						<div class='aura-element devilsight' id="vision_devilsight_${tokenId}" data-id='${options.id}' style='${devilsightStyles}'></div>
+					</div>` : ""
+				}
+			</div>
+			<div class='aura-clip-container truesight vision'>
+				${parseInt(options.truesight.feet) > 0 ? `
+					<div class='aura-element-container-clip vision truesight' style='clip-path: ${devilsightClip};' id='${options.id}'>
+						<div class='aura-element truesight' id="vision_truesight_${tokenId}" data-id='${options.id}' style='${truesightStyles}'></div>
+					</div>` : ""
+				}
+			</div>`) 
+		
 
 		lightElement.contextmenu(function(){return false;});
 		$("#light_container").prepend(lightElement);
@@ -4414,85 +4488,86 @@ function setTokenLight (token, options) {
 			debounceLightChecks();
 		}
 		
-		
-
+	
+		tokenVisionLightContainer = tokenGrandparent.find(".aura-element-container-clip[id='" + options.id +"']");
 		if(options.animation?.light && options.animation?.light != 'none'){
 
 			if(options.animation.customLightMask != undefined){
 				if(options.animation.customLightRotate == true){
-					token.parent().parent().find(".aura-element-container-clip[id='" + options.id +"']").attr('data-animation', 'aurafx-rotate')
+					tokenVisionLightContainer.attr('data-animation', 'aurafx-rotate')
 					if(options.animation.customLightRpm){
-						token.parent().parent().find(".aura-element-container-clip[id='" + options.id + "']").css('--custom-rotate-rpm', `${60/options.animation.customLightRpm}s`)
+						tokenVisionLightContainer.css('--custom-rotate-rpm', `${60/options.animation.customLightRpm}s`)
 					}
 				}
 				else{
-					token.parent().parent().find(".aura-element-container-clip[id='" + options.id +"']").attr('data-animation', '')
+					tokenVisionLightContainer.attr('data-animation', '')
 				}
 				if(options.animation.customLightDarkvision != undefined){
-					token.parent().parent().find(".aura-element-container-clip[id='" + options.id +"']").toggleClass('darkvision-animation', options.animation.customLightDarkvision)
+					tokenVisionLightContainer.toggleClass('darkvision-animation', options.animation.customLightDarkvision)
 				}
-				token.parent().parent().find(".aura-element-container-clip[id='" + options.id +"']").attr('data-custom-animation', 'true')
-				token.parent().parent().find(".aura-element-container-clip[id='" + options.id +"']").css('--custom-mask-image', `url('${parse_img(options.animation.customLightMask)}')`)
+				tokenVisionLightContainer.attr('data-custom-animation', 'true')
+				tokenVisionLightContainer.css('--custom-mask-image', `url('${parse_img(options.animation.customLightMask)}')`)
 				if(options.animation.customLightMask?.includes('above-bucket-not-a-url')){
 					setAvttFilePickerCssVar({
 						var: '--custom-mask-image',
-						target: token.parent().parent().find(".aura-element-container-clip[id='" + options.id + "']"),
+						target: tokenVisionLightContainer,
 						url: options.animation.customLightMask
 					})
 				}
 			}
 			else{
-				token.parent().parent().find(".aura-element-container-clip[id='" + options.id +"']").attr('data-animation', options.animation.light)
+				tokenVisionLightContainer.attr('data-animation', options.animation.light)
 			}
 			
 		}
 		else{
-			token.parent().parent().find(".aura-element-container-clip[id='" + options.id +"']").removeAttr('data-animation')
+			tokenVisionLightContainer.removeAttr('data-animation')
 		}
 		if(window.DM){
-			(options.hidden && options.reveal_light == 'never') ? token.parent().parent().find("#vision_" + tokenId).css("opacity", 0.5)
-			: token.parent().parent().find("#vision_" + tokenId).css("opacity", 1)
+			(options.hidden && options.reveal_light == 'never') ? tokenVisionLightContainer.find('[id^="vision_"]').css("opacity", 0.5)
+			: tokenVisionLightContainer.find('[id^="vision_"]').css("opacity", 1)
 		}
 		else{
-			options.hidden ? token.parent().parent().find("#vision_" + tokenId).hide()
-						: token.parent().parent().find("#vision_" + tokenId).show()
+			options.hidden ? tokenVisionLightContainer.find('[id^="vision_"]').hide()
+						: tokenVisionLightContainer.find('[id^="vision_"]').show()
 		}
 		if(totalSize > 0){
-			token.parent().parent().find("#light_" + tokenId).show()		
+			tokenGrandparent.find("#light_" + tokenId).show()		
 		}
 		else{
-			token.parent().parent().find("#light_" + tokenId).hide()
+			tokenGrandparent.find("#light_" + tokenId).hide()
 		}
-		token.parent().parent().find("#light_" + tokenId).toggleClass("islight", true);
+		tokenGrandparent.find("#light_" + tokenId).toggleClass("islight", true);
 	} else {
-		token.parent().parent().find(`.aura-element-container-clip[id='${options.id}']`).parent().remove();
+		tokenVisionLightContainer.parent().remove();
 	}
 	
 
-		
+	tokenVisionLightContainer = tokenGrandparent.find(".aura-element-container-clip[id='" + options.id +"']");
 		
 	if (!window.DM && playerNoVision){
-		token.parent().parent().find("#vision_" + tokenId).toggleClass("notVisible", true);
+		tokenVisionLightContainer.find('[id^="vision_"]').toggleClass("notVisible", true);
 	}		
 	if (!window.DM && playerNoTokenIsPc){
-		token.parent().parent().find("#vision_" + tokenId).toggleClass("notVisible", false);
+		tokenVisionLightContainer.find('[id^="vision_"]').toggleClass("notVisible", false);
 	}	
 		
 
 
 	if(options.type == 'door' && $(`.door-button[data-id='${options.id}']`).hasClass('closed') && $(`.door-button[data-id='${options.id}'] :is(.door, .curtain)`).length > 0){
-		$(".aura-element-container-clip[id='" + options.id +"']").css("display", "none")
+		tokenVisionLightContainer.css("display", "none")
 	}
 	else if(options.type == 'door'){
-		$(".aura-element-container-clip[id='" + options.id +"']").css("display", "")
+		tokenVisionLightContainer.css("display", "")
 	}
+	/*
 	if ((options.sight == 'devilsight' || options.sight == 'truesight') && (options.share_vision == true || options.share_vision == window.myUser || (options.share_vision && is_spectator_page()) || options.id.includes(window.PLAYER_ID) || window.DM || (is_player_id(options.id) && playerTokenId == undefined))){
-		token.parent().parent().find(`.aura-element-container-clip[id='${options.id}']`).toggleClass('devilsight', true);	
-		token.parent().parent().find(`.aura-element-container-clip[id='${options.id}']`).toggleClass('truesight', options.sight=='truesight');
+		tokenGrandparent.find(`.aura-element-container-clip[id='${options.id}']`).toggleClass('devilsight', true);	
+		tokenGrandparent.find(`.aura-element-container-clip[id='${options.id}']`).toggleClass('truesight', options.sight=='truesight');
 	}
 	else{
-		token.parent().parent().find(`.aura-element-container-clip[id='${options.id}']`).toggleClass(['devilsight', 'truesight'], false);
-	}
+		tokenGrandparent.find(`.aura-element-container-clip[id='${options.id}']`).toggleClass(['devilsight', 'truesight'], false);
+	}*/
 
 }
 
@@ -4593,7 +4668,7 @@ function setTokenBase(token, options) {
 	}
 
 	
-	token.toggleClass('labelToken', (options.tokenStyleSelect == 'labelToken' || options.alwaysshowname == true ));
+	token.toggleClass('labelToken', (options.tokenStyleSelect == 'f' || options.alwaysshowname == true ));
 
 
 	if(options.tokenStyleSelect != 'definitelyNotAToken'){

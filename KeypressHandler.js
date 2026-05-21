@@ -1,8 +1,6 @@
 var altHeld = false;
 var ctrlHeld = false;
 var shiftHeld = false;
-var cursor_x = -1;
-var cursor_y = -1;
 var arrowKeysHeld = [0, 0, 0, 0];
 
 const sb_scroll_style = "avtt-scroll-hidden"
@@ -603,11 +601,6 @@ Mousetrap.bind('mod+a', function (e) {
     }
 });
 
-document.onmousemove = function(event)
-{
- window.cursor_x = event.pageX;
- window.cursor_y = event.pageY;
-}
 
 Mousetrap.bind(['backspace', 'del'], function(e) {
     delete_selected_tokens();
