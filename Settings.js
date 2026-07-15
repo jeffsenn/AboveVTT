@@ -250,9 +250,10 @@ function token_setting_options() {
 			label: "Token Name Adjustment",
 			type: 'dropdown',
 			options: [
-				{ value: "count", label: "Count", description: "Tokens's name have a number appended to them." },
-				{ value: "personality", label: "Personality Trait", description: "Tokens's name have a personaility trait prepended." },
-				{ value: "none", label: "None", description: "Tokens's name will not be modified." }
+				{ value: "count", label: "Count", description: "Tokens names have an ascending number appended to them." },
+				{ value: "random", label: "Random Number", description: "Tokens names have a random number appended to them." },
+				{ value: "personality", label: "Personality Trait", description: "Tokens names have a personaility trait prepended." },
+				{ value: "none", label: "None", description: "Tokens names will not be modified." }
 			],
 			defaultValue: "count"
 		},
@@ -1361,6 +1362,7 @@ function build_example_token(options, size=90) {
 		mergedOptions.age = 1;
 	}
 	mergedOptions.exampleToken = true;
+	delete mergedOptions.name; // don't display example token names
 	// TODO: this is horribly inneficient. Clean up token.place and then update this
 	let token = new Token(mergedOptions);
 	token.place(0);
@@ -1588,10 +1590,12 @@ function build_sidebar_token_options_flyout(availableOptions, setValues, updateV
 			// We're about to call updateValue a bunch of times and only need to update the UI (or do anything else really) one time
 
 			availableOptions.forEach(option => updateValue(option.name, undefined));
-			updateValue('vision', {});
-			updateValue('light1', {});
-			updateValue('light2', {});
-
+			updateValue('vision', null);
+			updateValue('devilsight', null);
+			updateValue('truesight', null);
+			updateValue('light1', null);
+			updateValue('light2', null);
+			updateValue('includeDDB', null);	
 			let defaultTokenOptions = default_options();
 
 			if(showExtraOptions == true){	

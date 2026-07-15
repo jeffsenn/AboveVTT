@@ -80,6 +80,17 @@ button#startScreenShare{
     scale: 1;
     opacity: 1 !important;
 }
+body.responsive-enabled div.container,
+body.responsive-enabled.burger-ready div.container{
+    -webkit-perspective: unset;
+    -moz-perspective: unset;
+    perspective: unset;
+    -webkit-transform: unset; 
+    -moz-transform: unset;
+    -ms-transform: unset;
+    -o-transform: unset;
+    transform: unset;
+}
 div#hide_interface_button [data-name]:after {
     position: relative;
     left: unset;
@@ -925,9 +936,7 @@ select#doorTypeSelectUVTT{
 #avtt-sidebar-resize-handle:hover {
     background: rgba(100, 149, 237, 0.4);
 }
-body:has(#hide_rightpanel[data-visible="0"]) #avtt-sidebar-resize-handle {
-    display: none;
-}
+
 
 .iframeResizeCover {
     z-index:9999999;
@@ -1956,8 +1965,11 @@ div#scene_properties form > div{
 
 .tooltip-body {
     overflow-y: auto;
+    padding-bottom:55px;
 }
-
+.tooltip::after{
+    pointer-events:none;
+}
 .drag-cancelled {
     display: none;
 }
@@ -2100,12 +2112,98 @@ padding-bottom: 5px;
         0px 0px 5px #000;
     pointer-events:none;
 }
-.door-button[data-name][data-always-show-name='true']:hover:after,
+#portal_config_window{
+    min-height: 220px;
+    min-width: 475px;
+}
+#portal_config_window:has(>.minimized){
+    min-height:0px;
+}
+#portal_config_window #addPortal{
+    margin:10px 0px;
+}
+.portal-listing span.connected-portal {
+    transition: margin var(--overflow-speed, 800ms) linear 250ms;
+    text-overflow: ellipsis;
+    display: inline;
+    --name-width-overflow: -45px;
+    --overflow-speed: 1350ms;
+}
+.portal-listing span.connected-portal:hover {
+    margin-left: var(--name-width-overflow);
+}
+.portal-listing div.connected-portal-container {
+    width: 100%;
+    display: inline-block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    height: fit-content;
+    vertical-align: middle;
+    text-align-last: start;
+}
+
+.portal-listing{
+    background: var(--background-color, #fff);
+    left: 0;
+    top: -5px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin: 0;
+    min-height: 200px;
+    width: 100%;
+    height: calc(100% - 20px);
+    position: relative;
+    display: flex;
+    overflow: auto;
+    align-content: flex-start;
+    justify-content: center;
+    gap: 2px;
+    max-height: calc(100vH - 45px);
+}
+.portal-listing .portal-show-name {
+    margin-right:10px;
+}
+.portal-listing button.portalButton {
+    width: 20px;
+    padding: 0px;
+    height: 20px;
+    vertical-align: middle;
+    span.material-symbols-outlined {
+        font-size: 16px;
+        color: rgb(27, 154, 240);
+    }
+}
+
+table.portal-table{
+    table-layout: fixed;
+}
+table.portal-table tr.portal-entry:hover {
+    background: color-mix(in srgb, #d9eeff 20%, var(--background-color, #d9eeff) 80%);
+}
+
+table.portal-table,
+table.portal-table :is(td, th){
+    border-collapse: collapse;
+    border-spacing: 0px;
+    border: 6px solid transparent;
+}
+
+.portal-entry td {
+    display: table-cell;
+    align-content: center;
+    align-items: center;
+    text-align-last: center;
+}
+.door-button[data-name][data-always-show-name='true']:hover:after, 
 .door-button[data-name][data-always-show-name='true']:after{
-    transform: none;
+    transform: translate(-50%);
+    left: 50%;
 }
 .labelToken.notVisible.hasTooltip:after,
-.labelToken.notVisible.hasTooltip:hover:after{
+.labelToken.notVisible.hasTooltip:hover:after,
+.door-button.notVisible[data-name]::after,
+.door-button.notVisible[data-name]:hover::after {
     visibility: hidden;
 }
 #token_map_items .labelToken.hasTooltip:after, 
@@ -2583,7 +2681,23 @@ padding-top:10px;
     border-radius: calc(2px * var(--scene-scale, 1));
     pointer-events: none;
 }
+@keyframes march {
+  to { background-position: 10px 0, -10px 100%, 0 -10px, 100% 10px; }
+}
 
+.door-button.tokenselected::before {
+    top: -2px;
+    bottom: -8px;
+    left: -2px;
+    right: -2px;
+    border-radius: 4px;
+    border: none;
+    background-image: linear-gradient(90deg, #000d 50%, #fffd 50%), linear-gradient(90deg, #000d 50%, #fffd 50%), linear-gradient(0deg, #000d 50%, #fffd 50%), linear-gradient(0deg, #000d 50%, #fffd 50%);
+    background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+    background-size: 5px 2px, 5px 2px, 2px 5px, 2px 5px;
+    background-position: 0 0, 0 100%, 0 0, 100% 0;
+    animation: march 1s linear infinite;
+}
 .tokenselected.ui-draggable-disabled::before{
     border: 5px #f7bfbfd5 solid
 }
@@ -3461,6 +3575,53 @@ body .note-visibility-toggle-container {
     width:80%;
 }
 
+.tooltip-hover.action-tooltip {
+    color: var(--compendium-action-tooltip,var(--compendium-default-tooltip,#11884c))!important
+}
+
+.tooltip-hover.condition-tooltip {
+    color: var(--compendium-condition-tooltip,var(--compendium-default-tooltip,#5a8100))!important
+}
+
+.tooltip-hover.item-tooltip {
+    color: var(--compendium-item-tooltip,#774521)!important
+}
+
+.tooltip-hover.lore-tooltip {
+    color: var(--compendium-lore-tooltip,#a83e3e)!important
+}
+
+.tooltip-hover.monster-tooltip {
+    color: var(--compendium-monster-tooltip,#bc0f0f)!important
+}
+
+.tooltip-hover.magic-item-tooltip {
+    color: var(--compendium-magic-item-tooltip,#0f5cbc)!important
+}
+
+.tooltip-hover.rule-tooltip {
+    color: var(--compendium-rule-tooltip,#9b740b)!important
+}
+
+.tooltip-hover.sense-tooltip {
+    color: var(--compendium-sense-tooltip,var(--compendium-default-tooltip,#a41b96))!important
+}
+
+.tooltip-hover.spell-tooltip {
+    color: var(--compendium-spell-tooltip,#704cd9)!important
+}
+
+.tooltip-hover.skill-tooltip {
+    color: var(--compendium-skill-tooltip,var(--compendium-default-tooltip,#11884c))!important
+}
+
+.tooltip-hover.weapon-properties-tooltip {
+    color: var(--compendium-wprop-tooltip,var(--compendium-default-tooltip,#11884c))!important
+}
+
+.tooltip-hover.vehicle-tooltip {
+    color: var(--compendium-vehicle-tooltip,#1b9af0)!important
+}
 #dmScreenContainer {
     overflow: hidden;
     height: calc(100% - 35px);
@@ -5111,13 +5272,19 @@ h5.token-image-modal-footer-title:after {
     background-color: #979AA4;
     display: block;
 }
+.sidebar-panel-footer .token-config-aura-wrapper h3
+ {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-left: 4px;
+}
 .avtt-settings-section h4~div>h5.token-image-modal-footer-title:after {
     margin: 0px;
 }
 
 .sidebar-panel-footer input,
 .token-image-modal-footer input {
-    margin-bottom: 6px;
     width: auto;
 }
 .sidebar-panel-footer-horizontal-wrapper,
@@ -5239,6 +5406,29 @@ div#importer_area>div>div:first-of-type {
     margin: 2px !important;
     position: relative !important;
     opacity: 1 !important;
+}
+.example-token.default-token-image:after{
+    content: 'Default';
+    color: #fff;
+    text-shadow: 0px 0px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    font-size: 9px;
+    font-weight:bold;
+    display:flex;
+    padding: 1px;
+    position:absolute;
+    bottom:20px;
+    top:unset;
+    z-index:10;
+    justify-content: center;
+    opacity:1;
+    visibility:visible;
+    left: unset;
+    transform: unset;
+    background:none;
+    transition:none;
+}
+.example-token.removeTransition:after{
+    transition:none;
 }
 div#token-change-image-modal img.example-token:first-of-type {
     box-shadow: 0px 0px 2px 2px #1b9af07a;
@@ -6440,11 +6630,7 @@ button.avtt-roll-button,
     letter-spacing: 1px;
     padding: 1px 4px 0;
 }
-.tooltip .tooltip-body-statblock-item-value{
-    display:flex;
-    flex-direction: row;
-    align-items: center;
-}
+
 .tooltip .above-aoe.integrated-dice__container,
 .avtt-aoe-button {
     display: inline-flex;
@@ -6565,10 +6751,12 @@ button.avtt-roll-formula-button {
 }
 
 #sounds-panel .sidebar-panel-header {
-    padding: 4px;
+    padding: 0px 0px 0px 4px;
     border-bottom: 1px solid #2b2b2b;
 }
-
+#sounds-panel .sidebar-panel-header .audio-row {
+ padding: 0px 8px 0px 0px
+}
 #sounds-panel .audio-row  {
     height: 25px;
 }
@@ -7265,6 +7453,15 @@ button.avtt-roll-formula-button {
 .menu-vision-aura{
     margin: 2px 0px;
 }
+.menu-outer-aura .token-image-modal-footer-title,
+.menu-inner-aura .token-image-modal-footer-title,
+.menu-vision-aura .token-image-modal-footer-title{
+    margin: 0px 3px 0px 8px;
+    display: flex;
+    justify-content: flex-end;
+    text-align: end;
+}
+
 #tokenOptionsContainer div.token-image-modal-url-label-wrapper{
     display: flex;
     align-self: center;
@@ -8240,7 +8437,6 @@ button span.onedrive-btn-status{
 #token-configuration-modal .token>.token-image.freeform{
     border: 0px;
     box-shadow: none;
-    transition: max-height 0.2s linear, max-width 0.2s linear, min-height 0.2s linear, min-width 0.2s linear;
     min-height: 0px;
     min-width: 0px;
     --aura-width: max(1px, calc(1px / var(--window-zoom)));
@@ -9897,12 +10093,6 @@ button.journal-view-button.journal-button img {
     padding: 10px 5px;
     text-align: center
 }
-/* START - New quote box implementation */
-[class*='MessageContainer'] .tooltip-body{
-    padding: 0px;
-    width: 265px;
-    overflow-wrap: anywhere;
-}
 
 
 .note-text .text--quote-box {
@@ -10400,8 +10590,9 @@ button.journal-view-button.journal-button img {
 /* START - New quote box implementation */
 [class*='MessageContainer'] .tooltip-body{
     padding: 0px;
-    width: 265px;
+    min-width: 265px;
     overflow-wrap: anywhere;
+    width: 100%;
 }
 
 
@@ -11721,7 +11912,11 @@ table#light_presets_properties div.token-image-modal-footer-title{
     width: 10px;
     transform: translate(45px, 10px);
 }
-
+td.animation-aura .light-animation-select,
+td.animation-aura .aura-animation-select {
+    min-width:100%;
+    max-width:100%;
+}
 #light_presets_properties div.removePreset,
 #animation_presets_properties div.removePreset,
 #aura_presets_properties div.removePreset{
@@ -11979,9 +12174,13 @@ li.audio-row:hover .channel-progress-bar-total
 
 }
 #mixer-channels{
-    max-height: 400px;
     overflow-y: auto;
     padding-bottom: 2px;
+    max-height: calc(100% - 85px);
+}
+#sounds-panel .sidebar-panel-header{
+    height: 236px;
+    max-height: calc(100% - 16px);
 }
 #mixer-channels .volume-control{
     left: 0;
@@ -12044,7 +12243,7 @@ li.audio-row:hover .channel-progress-bar-total
     fill: #000;
 }
 div#sounds-panel {
-    overflow-y: visible;
+    overflow-y: hidden;
 }
 
 

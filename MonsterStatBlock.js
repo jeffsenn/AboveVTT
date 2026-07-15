@@ -212,7 +212,7 @@ async function build_monster_stat_block(statBlock, token) {
     : token?.options?.imgsrc == statBlock.data.avatarUrl || token?.options?.imgsrc == undefined
       ? statBlock.data.largeAvatarUrl
       : token.options.imgsrc
-  if (get_avtt_setting_value('statBlockStyle') == 0 && statBlock.data.initiativeBonus != null || get_avtt_setting_value('statBlockStyle') == 2) {
+  if (get_avtt_setting_value('statBlockStyle') == 0 && (statBlock.data.initiativeBonus != null || statBlock.data['5.5e'] == true) || get_avtt_setting_value('statBlockStyle') == 2) {
     statblockData = `
     <div class="container avtt-stat-block-container ${(statBlock.data.slug) ? 'open5eMonster' : ''}">
       <div id="content" class="main content-container" style="padding:0!important">
@@ -1762,7 +1762,7 @@ function get_monster_senses(senses, vision = {darkvision: 0, devilsight: 0, true
         const ftPosition = senses[i].notes.indexOf('ft.')
         
         const range = parseInt(senses[i].notes.slice(0, ftPosition));
-        if(monsterSenseIds[senseKey] == undefined && range>darkvision){
+        if(monsterSenseIds[senseKey] == undefined && range>vision.darkvision){
           vision.darkvision = range;
         } else{
           if(monsterSenseIds[senseKey] == 'darkvision'){
@@ -1940,7 +1940,7 @@ const fetch_tooltip = mydebounce(async (dataTooltipHref, name, callback) => {
         }
         
         window.ajaxQueue.addRequest({
-          url: `https://www.dndbeyond.com/${typeAndId}/tooltip-json`,
+          url: `https://www.dndbeyond.com/${typeAndId}/tooltip`,
           beforeSend: function() {
             // only make the call if we don't have it cached.
             // This prevents the scenario where a user triggers `mouseenter`, and `mouseleave` multiple times before the first network request finishes
@@ -1953,15 +1953,21 @@ const fetch_tooltip = mydebounce(async (dataTooltipHref, name, callback) => {
           },
           success: async function (response) {
             console.log("fetch_tooltip success", response);
+            let responseJSON;
+            try{
+              responseJSON = JSON.parse(response.replace(/^[^{]*|[^}]*$/g, ""));
+            }
+            catch{
+              if(typeof response === 'string'){
 
-            if(typeof response === 'string'){
-
-              homebrewTooltip()
-              return;
+                homebrewTooltip()
+                return;
+              }
             }
 
-            window.tooltipCache[typeAndId] = response;
-            callback(response);
+
+            window.tooltipCache[typeAndId] = responseJSON;
+            callback(responseJSON);
           },
           error: function (error) {
             console.warn("fetch_tooltip error - attmpting more info link for homebrew/sources", error);
@@ -2033,65 +2039,16 @@ function add_tooltip_aoe_buttons(html, tokenId){
   }  
 }
 
-function display_tooltip(tooltipJson, container, clientY, tokenId=undefined) {
+function display_tooltip(tooltipJson, container, hoverEvent, tokenId=undefined) {
     if (typeof tooltipJson?.Tooltip === "string") {
         remove_tooltip(0, false);
 
         console.log("container", container)
         const tooltipHtmlString = tooltipJson.Tooltip.replaceAll(/<script>[\S\s]+<\/script>/gi, '');
 
-        build_and_display_sidebar_flyout(clientY, function (flyout) {
-            flyout.addClass("prevent-sidebar-modal-close"); // clicking inside the tooltip should not close the sidebar modal that opened it
-            flyout.addClass("tooltip-flyout")
-            const tooltipHtml = $(tooltipHtmlString);
-            add_journal_roll_buttons(tooltipHtml, tokenId);
-            add_aoe_statblock_click(tooltipHtml, tokenId);
-            add_tooltip_aoe_buttons(tooltipHtml, tokenId);
-            flyout.append(tooltipHtml);
-            let sendToGamelogButton = $(`<a class="ddbeb-button" href="#">Send To Gamelog</a>`);
-            sendToGamelogButton.css({ "float": "right" });
-            sendToGamelogButton.on("click", function(ce) {
-                ce.stopPropagation();
-                ce.preventDefault();
-                const tooltipWithoutButton = $(tooltipHtmlString);
-                tooltipWithoutButton.css({
-                    "width": "100%",
-                    "max-width": "100%",
-                    "min-width": "100%"
-                });
-                let outerHtml = $(tooltipWithoutButton[0].outerHTML);
-                outerHtml.find('style').remove();
-                send_html_to_gamelog(outerHtml[0].outerHTML);
-            });
 
-            const buttonFooter = $("<div></div>");
-            buttonFooter.css({
-                height: "40px",
-                width: "100%",
-                position: "relative",
-                background: "#fff"
-            });
-            flyout.append(buttonFooter);
-            buttonFooter.append(sendToGamelogButton);
-
-            const didResize = position_flyout_on_best_side_of(container, flyout);
-            if (didResize) {
-                // only mess with the html that DDB gave us if we absolutely have to
-                tooltipHtml.css({
-                    "width": "100%",
-                    "max-width": "100%",
-                    "min-width": "100%"
-                });
-            }
-
-            flyout.hover(function (hoverEvent) {
-                if (hoverEvent.type === "mouseenter") {
-                    clearTimeout(removeToolTipTimer);
-                    removeToolTipTimer = undefined;
-                } else {
-                    remove_tooltip(500);
-                }
-            });
+        build_and_display_sidebar_flyout(hoverEvent.clientY, function (flyout) {
+            setup_tooltip_flyout(flyout, tooltipHtmlString, ['tooltip-flyout'], hoverEvent, {id: tokenId, container});
             flyout.css("background-color", "#fff");
         });
     }
@@ -2099,18 +2056,12 @@ function display_tooltip(tooltipJson, container, clientY, tokenId=undefined) {
 
 var removeToolTipTimer = undefined;
 function remove_tooltip(delay = 0, removeHoverNote = true) {
+    clearTimeout(removeToolTipTimer);
     if (delay > 0) {
-      if($('.prevent-sidebar-modal-close:hover').length>0){
-        clearTimeout(removeToolTipTimer);
-        removeToolTipTimer = undefined;
-      }
-      else{
-        removeToolTipTimer = setTimeout(function(){remove_sidebar_flyout(removeHoverNote)}, delay);
-      } 
+      removeToolTipTimer = setTimeout(function(){remove_sidebar_flyout(removeHoverNote)}, delay);
     } else {
-        clearTimeout(removeToolTipTimer);
-        removeToolTipTimer = undefined;
-        remove_sidebar_flyout(removeHoverNote);
+      removeToolTipTimer = undefined;
+      remove_sidebar_flyout(removeHoverNote);
     }
 }
 
@@ -2155,7 +2106,7 @@ function add_stat_block_hover(statBlockContainer, tokenId) {
                     container = is_characters_page() ? $(".ct-sidebar__inner [class*='styles_content']") : $(".sidebar__pane-content");
                 }
 
-                display_tooltip(tooltipJson, container, hoverEvent.clientY, tokenId);   
+                display_tooltip(tooltipJson, container, hoverEvent, tokenId);   
             };
             if(window.tooltipCache == undefined)
               window.tooltipCache = {};

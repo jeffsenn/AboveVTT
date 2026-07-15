@@ -9,9 +9,16 @@ const sb_scroll_style = "avtt-scroll-hidden"
 
 function init_keypress_handler(){
 
+document.addEventListener('keydown', (e) => {
+  if (!window.DRAGGING) return;
 
+  if (e.repeat && !['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
+}, true);
 Mousetrap.bind('c', function () {       //combat tracker
-        $('#combat_button').click()
+    $('#combat_button').click()
 });
 
 
@@ -225,7 +232,7 @@ Mousetrap.bind('enter', function () {       //zoom minus
     }
 });
 
-Mousetrap.bind('ctrl+space', function (e) {    
+Mousetrap.bind('mod+space', function (e) {    
     e.preventDefault();
     $('#combat_area tr[data-current=1] .findTokenCombatButton').click();
 });
@@ -288,6 +295,7 @@ Mousetrap.bind('shift+w', function () {
 Mousetrap.bind('j', function () {
     if(window.DM){
         $('#snap_walls').toggleClass(['button-enabled', 'ddbc-tab-options__header-heading--is-active']);
+        window.SNAP_WALLS = $('#snap_walls').hasClass('button-enabled');
     }
 });
     
@@ -491,7 +499,9 @@ Mousetrap.bind('shift', function () {
 }, 'keyup');
 
 
-Mousetrap.bind('mod', function () {
+Mousetrap.bind('mod', function (e) {
+    e.stopImmediatePropagation();
+    if (e.repeat) return;
     if (ctrlHeld == true && window.toggleSnap == true) 
         return;
     
@@ -538,7 +548,11 @@ Mousetrap.bind('mod+c', function(e) {
     }
     
 });
-
+Mousetrap.bind('shift+p', function(e) {
+    if(!window.DM)
+        return;
+    open_portal_config();
+});
 
 Mousetrap.bind('mod+v', async function(e) {
     if (await avttHandleFilePickerPaste(e)) {
@@ -598,7 +612,7 @@ Mousetrap.bind('mod+a', function (e) {
     } else if($('#select-button').hasClass('button-enabled')){ //select all tokens
         e.preventDefault();
         select_all_tokens();
-    }
+    } 
 });
 
 
@@ -670,12 +684,21 @@ function key_rotation(angle) {
         key_rotation_angle = 0;
         grouprotate_create();
     }
-    key_rotation_done = setTimeout(() => {
+    const commitRotate = function(){
+        clearTimeout(key_rotation_done);
         window.key_rotation_pause = true;
         key_rotation_done = null;
         grouprotate_commit(key_rotation_angle);
-        draw_selected_token_bounding_box();	        
-    }, 1000);
+        draw_selected_token_bounding_box();	
+    }
+    key_rotation_done = setTimeout(commitRotate, 1000);
+
+    $(document).off('pointerdown.commitRotate').one('pointerdown.commitRotate', function(){
+        $(document).off('pointerdown.commitRotate');
+        if(key_rotation_done == null)
+            return;
+        commitRotate()    
+    })
     key_rotation_angle += (360 + angle) % 360;
     grouprotate_rotate(key_rotation_angle);
 }
@@ -688,21 +711,11 @@ Mousetrap.bind(']', () => key_rotation(rotate_by_gridtype()));
 Mousetrap.bind('shift+[', () => key_rotation(-10));
 Mousetrap.bind('shift+]', () => key_rotation(10));
     
-var rotationKeyPresses = [];
-window.addEventListener("keydown", async (event) => {
-    const arrowKeys = [ 'ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown' ];
-    if (event.shiftKey && arrowKeys.includes(event.key) ) {
-        rotationKeyPresses.push(event.key)
-    }
-    if((event.ctrlKey || event.metaKey) && event.key == 'a' && event.target.tagName == 'INPUT'){
-        event.target.select();
-    }
-});
-window.addEventListener("keyup", async (event) => {
-    if (!event.shiftKey) {
-        rotationKeyPresses = [];
-        return;
-    }
+let rotationKeyPresses = [];
+
+Mousetrap.bind(['shift+left', 'shift+up', 'shift+right', 'shift+down'], async (event) => {
+
+    rotationKeyPresses.push(event.key)
     if (rotationKeyPresses.includes('ArrowDown') && rotationKeyPresses.includes('ArrowLeft')) {
         rotate_selected_tokens(45, true);
     } else if (rotationKeyPresses.includes('ArrowLeft') && rotationKeyPresses.includes('ArrowUp')) {

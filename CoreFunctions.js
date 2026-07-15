@@ -306,7 +306,8 @@ Other Commands:
     }
   });
 
-  
+  if(window.rollButtonObserver)
+    window.rollButtonObserver.disconnect();
   window.rollButtonObserver = new MutationObserver(function() {
       // Any time the DDB dice buttons change state, we want to synchronize our dice buttons to match theirs.
       if ($("[class*='AnchoredPopover_wrapper']").length>0 && window.diceRoller?.getWaitingForRoll())
@@ -355,7 +356,9 @@ Other Commands:
       }, 0);  
   })
 
-  let watchForDicePanel = new MutationObserver((mutations) => {
+  if(window.watchForDicePanel)
+    window.watchForDicePanel.disconnect();
+  window.watchForDicePanel = new MutationObserver((mutations) => {
    mutations.every(async (mutation) => {
       if (!mutation.addedNodes) return
 
@@ -366,20 +369,22 @@ Other Commands:
           const mutation_target = $(".dice-toolbar__dropdown, [class*='AnchoredPopover_wrapper']")[0];
           const mutation_config = { attributes: true, childList: true, characterData: true, subtree: true };
           window.rollButtonObserver.observe(mutation_target, mutation_config);
-          watchForDicePanel.disconnect();
+          window.watchForDicePanel.disconnect();
           return false;
         }
       }
       return true // must return true if doesn't break
     })
   });
+
   if (window.sendToDefaultObserver)
-    window.sendToDefaultObserver.disconnect();
-  if (window.diceResultsObserver)
     window.sendToDefaultObserver.disconnect();
   window.sendToDefaultObserver = new MutationObserver(function() {
     localStorage.setItem(`${window.gameId != undefined ? window.gameId : window.myUser}-sendToDefault`, gamelog_send_to_text());
   })
+
+  if (window.diceResultsObserver)
+    window.diceResultsObserver.disconnect();
   window.diceResultsObserver = new MutationObserver(function (mutations) {
     mutations.every((mutation) => {
       const firstAddedNode = $(mutation.addedNodes[0]);
@@ -391,7 +396,9 @@ Other Commands:
     })
   })
 
-  let gamelogObserver = new MutationObserver((mutations) => {
+  if(window.gamelogObserver)
+    window.gamelogObserver.disconnect();
+  window.gamelogObserver = new MutationObserver((mutations) => {
     mutations.every((mutation) =>{
       if (!mutation.addedNodes) return
       for (let i = 0; i < mutation.addedNodes.length; i++) {
@@ -844,7 +851,10 @@ function create_update_token(options, save = true) {
   }
   
   window.TOKEN_OBJECTS[id].place(0);
-  window.TOKEN_OBJECTS[id].sync($.extend(true, {}, options));
+  window.TOKEN_OBJECTS[id].sync();
+  if(window.all_token_objects[id] == undefined){
+    window.all_token_objects[id] = window.TOKEN_OBJECTS[id]	
+  }
 
 }
 function add_journal_roll_buttons(target, tokenId=undefined, specificImage=undefined, specificName=undefined){
@@ -855,11 +865,11 @@ function add_journal_roll_buttons(target, tokenId=undefined, specificImage=undef
   for(let i=0; i<pastedButtons.length; i++){
     $(pastedButtons[i]).replaceWith($(pastedButtons[i]).text());
   }
+  const tokenExists = tokenId != undefined && window.all_token_objects?.[tokenId] != undefined;
+  const rollImage = specificImage ? specificImage : tokenExists ? window.all_token_objects[tokenId].options.imgsrc : window.PLAYER_IMG
+  const rollName = specificName ? specificName : tokenExists ? window.all_token_objects[tokenId].options.revealname == true || window.all_token_objects[tokenId].options.player_owned ? window.all_token_objects[tokenId].options.name : '' : window.PLAYER_NAME
 
-  const rollImage = specificImage ? specificImage : (tokenId) ? window.all_token_objects[tokenId].options.imgsrc : window.PLAYER_IMG
-  const rollName = specificName ? specificName : (tokenId) ? window.all_token_objects[tokenId].options.revealname == true || window.all_token_objects[tokenId].options.player_owned ? window.all_token_objects[tokenId].options.name : '' : window.PLAYER_NAME
-
-  const clickHandler = function(clickEvent) {
+  const clickHandler = function(clickEvent) { 
     clickEvent.stopPropagation();
     roll_button_clicked(clickEvent, rollName, rollImage, tokenId ? "monster" : undefined, tokenId)
   };
@@ -1272,23 +1282,26 @@ function inject_dice(){
         </style>
     </div>
   `);
- window.encounterObserver = new MutationObserver(function(mutationList, observer) {
+  if(window.encounterObserver){
+    window.encounterObserver.disconnect();
+  }
+  window.encounterObserver = new MutationObserver(function(mutationList, observer) {
 
-  mutationList.forEach(mutation => {
-     try {
-       let mutationTarget = $(mutation.target);
-       
-       if(mutationTarget.is('.encounter-details, .encounter-builder, .release-indicator')){
-         mutationTarget.remove();
-       }
-       if($(mutation.addedNodes).is('.encounter-builder, .release-indicator')){
-         $(mutation.addedNodes).remove();
-       }
-     } catch(error){
-       console.warn("non_sheet_observer failed to parse mutation", error, mutation);
-     }
-   });
- })
+    mutationList.forEach(mutation => {
+      try {
+        let mutationTarget = $(mutation.target);
+        
+        if(mutationTarget.is('.encounter-details, .encounter-builder, .release-indicator')){
+          mutationTarget.remove();
+        }
+        if($(mutation.addedNodes).is('.encounter-builder, .release-indicator')){
+          $(mutation.addedNodes).remove();
+        }
+      } catch(error){
+        console.warn("non_sheet_observer failed to parse mutation", error, mutation);
+      }
+    });
+  })
 
  
  const mutation_target = $('#encounter-builder-root')[0];
@@ -2255,7 +2268,7 @@ function projector_scroll_event(event){
               scrollPercentageX:  (window.pageXOffset + window.innerWidth/2 - sidebarSize/2) / Math.max( document.body.scrollWidth, document.body.offsetWidth, 
                    document.documentElement.clientWidth, document.documentElement.scrollWidth, document.documentElement.offsetWidth ),
               zoom: zoom,
-              mapPos: convert_point_from_view_to_map(center.x, center.y, true, true)
+              mapPos: convert_point_from_view_to_map(center.x, center.y, true)
             });
       }
 }
@@ -2942,13 +2955,12 @@ function makeDialogMenuTrigger(element, trigger, menuId, createMenu, onShow) {
       dialog.close();
     } else {
       if(onShow) onShow(e, dialog, elementId); //before show callback
-      //right now using show (but could decide that showModal is better)
-      dialog.show(); //so we can get dimensions 
+
       $(dialog).attr("data-whichbutton", elementId) //remember who triggered
       const rect = $(e.target)[0].getBoundingClientRect();
-      const menuRect = $(dialog)[0].getBoundingClientRect();
-      const winW = window.innerWidth;
-      const winH = window.innerHeight;
+      const menuRect = {height: $(dialog).height(), width:  $(dialog).width()};
+      const winW = e.target.ownerDocument.defaultView.innerWidth;
+      const winH = e.target.ownerDocument.defaultView.innerHeight;
       const top = Math.max(10, (rect.bottom + menuRect.height > winH) 
         ? rect.top - menuRect.height 
         : rect.bottom);
@@ -2960,6 +2972,8 @@ function makeDialogMenuTrigger(element, trigger, menuId, createMenu, onShow) {
         top: top + 'px',
         left: left + 'px',
       });
+      dialog.show(); 
+
     }
   });
   return element;
@@ -3019,7 +3033,7 @@ function createSendPlayerMenu(menuId, target) {
     const dialog = $(e.target).closest(".js-popup")?.[0];      
     const options = $(e.target).closest(".js-popup-options")?.[0];
     const selected = $(options).find('.js-popup--is-active').map((i, el) => el.getAttribute('data-id')).get().filter((a)=> !a.startsWith('_'));
-    const theTriggeringButton = $(`#${$(dialog).attr("data-whichbutton")}`);
+    const theTriggeringButton = $(`button#${$(dialog).attr("data-whichbutton")}`, e.target.ownerDocument);
     //todo: if selected is everyone then use undefined here:
     ((verb === 'pop') ? sendPopElement : sendClonedElement)(theTriggeringButton.parent(), selected);
     $(e.target).removeClass('js-popup--is-active');
@@ -3048,7 +3062,7 @@ function createSendPlayerMenu(menuId, target) {
 }
 
 function setPlayerButtonSetPopupStatus(e, dialog, buttonId) {
-  const hasPopupOption = $("#"+buttonId).attr("data-haspopup");
+  const hasPopupOption = $(`button#${buttonId}`, e.target.ownerDocument).attr("data-haspopup");
   $("#send-player-menu__pop", e.target.ownerDocument).css("display", hasPopupOption ? "" : "none"); 
 }
 function createSendPlayerButton(parent, icon, hasPopupOption=false ) {
@@ -3065,7 +3079,7 @@ function createSendPlayerButton(parent, icon, hasPopupOption=false ) {
 }
 //-end- dialog menus 
 
-function find_or_create_generic_draggable_window(id, titleBarText, addLoadingIndicator = true, addPopoutButton = false, popoutSelector=``, width='80%', height='80%', top='10%', left='10%', showSlow = true, cancelClasses='', hideOnX = false, alwaysDisplayTitle = false) {
+function find_or_create_generic_draggable_window(id, titleBarText, addLoadingIndicator = true, addPopoutButton = false, popoutSelector=``, width='80%', height='80%', top='10%', left='10%', showSlow = true, cancelClasses='', hideOnX = false, alwaysDisplayTitle = false, onCloseCallback = () => {}) {
   console.log(`find_or_create_generic_draggable_window id: ${id}, titleBarText: ${titleBarText}, addLoadingIndicator: ${addLoadingIndicator}, addPopoutButton: ${addPopoutButton}`);
 
   const existing = $(`[id="${id.replace('#', '')}"]`);
@@ -3125,6 +3139,7 @@ function find_or_create_generic_draggable_window(id, titleBarText, addLoadingInd
       $(event.currentTarget).closest('.resize_drag_window').hide();
     }
     else{
+      onCloseCallback();
       close_and_cleanup_generic_draggable_window($(event.currentTarget).closest('.resize_drag_window').attr('id'));
     }
 

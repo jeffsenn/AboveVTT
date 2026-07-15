@@ -1,6 +1,7 @@
 
 function consider_upscaling(target){
-	target.scale_factor = Math.max(1, Math.ceil(60 / target.hpps), Math.ceil(60 / target.vpps));	
+	const targetScale = Math.max(Math.ceil(60 / target.hpps), Math.ceil(60 / target.vpps));
+	target.scale_factor = clamp(targetScale, 1, 6);	
 }
 
 function handle_basic_form_toggle_click(event){
@@ -12,8 +13,8 @@ function handle_basic_form_toggle_click(event){
 		$(event.currentTarget).removeClass("rc-switch-unknown");
 		$(event.currentTarget).addClass("rc-switch-checked");
 	  }
-}
-
+	  
+	}
 function handle_map_toggle_click(event){
 	handle_basic_form_toggle_click(event)
 	// validate image input expects the target to be the input not the t oggle
@@ -2260,65 +2261,7 @@ async function redraw_scene_list(searchTerm) {
 											</div>
 										</div>
 									</div>`
-									flyout.addClass("prevent-sidebar-modal-close"); // clicking inside the tooltip should not close the sidebar modal that opened it
-									flyout.addClass('note-flyout');
-									const tooltipHtml = $(noteHover);
-									await window.JOURNAL.translateHtmlAndBlocks(tooltipHtml, noteId);
-									add_journal_roll_buttons(tooltipHtml);
-									window.JOURNAL.add_journal_tooltip_targets(tooltipHtml);
-									add_stat_block_hover(tooltipHtml, sceneId);
-									add_aoe_statblock_click(tooltipHtml, sceneId);
-
-									$(tooltipHtml).find('.add-input').each(function(){window.JOURNAL.addTrackedInputs($(this), {noteId})})
-									flyout.append(tooltipHtml);
-									let sendToGamelogButton = $(`<a class="ddbeb-button" href="#">Send To Gamelog</a>`);
-									sendToGamelogButton.css({ "float": "right" });
-									sendToGamelogButton.on("click", function (ce) {
-										ce.stopPropagation();
-										ce.preventDefault();
-
-										send_html_to_gamelog(noteHover);
-									});
-
-									flyout.css({
-										right: '350px',
-										width: '400px'
-									})
-									let flyoutTop = e.clientY;
-									let flyoutHeight = flyout.height() + 25;
-									let bottom = (e.clientY + flyoutHeight);
-
-									if (bottom > window.innerHeight) {
-										flyoutTop = flyoutTop - (bottom - window.innerHeight) - 25;
-									}
-									flyout.css('top', flyoutTop);
-									const buttonFooter = $("<div></div>");
-									buttonFooter.css({
-										height: "40px",
-										width: "100%",
-										position: "relative",
-										background: "#fff"
-									});
-									window.JOURNAL.block_send_to_buttons(flyout);
-									flyout.append(buttonFooter);
-									buttonFooter.append(sendToGamelogButton);
-									flyout.find("a").attr("target", "_blank");
-									flyout.off('click').on('click', '.tooltip-hover[href*="https://www.dndbeyond.com/sources/dnd/"], .int_source_link ', function (event) {
-										event.preventDefault();
-										render_source_chapter_in_iframe(event.target.href);
-									});
-
-
-									flyout.hover(function (hoverEvent) {
-										if (hoverEvent.type === "mouseenter") {
-											clearTimeout(removeToolTipTimer);
-											removeToolTipTimer = undefined;
-										} else {
-											remove_tooltip(500);
-										}
-									});
-
-									flyout.css("background-color", "#fff");
+									setup_tooltip_flyout(flyout, noteHover, ['note-flyout'], e, {id: noteId})
 								});
 							}, 500);
 
@@ -2388,7 +2331,7 @@ async function redraw_scene_list(searchTerm) {
        enable_draggable_change_folder(ItemType.Scene)
 }
 
-async function create_scene_inside(parentId, fullPath = RootFolder.Scenes.path, sceneName = "New Scene", mapUrl = "") {
+async function create_scene_inside(parentId, fullPath = RootFolder.Scenes.path, sceneName = "New Scene", mapUrl = "", sceneArray = undefined) {
 	const sanitizedFullPath = sanitize_folder_path(fullPath || RootFolder.Scenes.path);
 	const existingNames = new Set(
 		window.ScenesHandler.scenes
@@ -2399,7 +2342,10 @@ async function create_scene_inside(parentId, fullPath = RootFolder.Scenes.path, 
 	const sceneData = await build_scene_data_payload(parentId, sanitizedFullPath, sceneName, mapUrl, existingNames);
 
 	window.ScenesHandler.scenes.push(sceneData);
-
+	if(Array.isArray(sceneArray)){
+		sceneArray.push(sceneData);
+		return sceneArray;
+	}
 	await AboveApi.migrateScenes(window.gameId, [sceneData]);
 
 	const sceneIndex = window.ScenesHandler.scenes.findIndex((scene) => scene.id === sceneData.id);
@@ -3304,9 +3250,20 @@ async function create_scene_root_container(fullPath, parentId) {
 		"player_map": "",
 	}, `${window.EXTENSION_PATH}images/Dropbox_Icon.svg`, false);
 
-	const dropboxOptionsImport = dropBoxOptions(function(files){
-		create_scene_inside(parentId, fullPath, files[0].name, files[0].link);
-	});
+	const dropboxOptionsImport = dropBoxOptions(async function(files){
+		const sceneArray = [];
+		for(let i=0; i<files.length; i++){
+			await create_scene_inside(parentId, fullPath, files[i].name, files[i].link, sceneArray);
+		}
+		await AboveApi.migrateScenes(window.gameId, sceneArray);
+		if(sceneArray.length == 1){
+			const sceneIndex = window.ScenesHandler.scenes.findIndex((scene) => scene.id === sceneArray[0].id);
+			if (sceneIndex >= 0) {
+				edit_scene_dialog(sceneIndex, true);
+			}
+		}
+		did_update_scenes();
+	}, true);
 	dropboxImport.css("width", "25%");
 	sectionHtml.find("ul").append(dropboxImport);
 	dropboxImport.find(".listing-card__callout").hide();
@@ -3356,9 +3313,20 @@ async function create_scene_root_container(fullPath, parentId) {
 	onedriveImport.find("a.listing-card__link").click(function (e) {
 		e.stopPropagation();
 		e.preventDefault();
-    	launchPicker(e, function(files){
-			create_scene_inside(parentId, fullPath, files[0].name, files[0].link);
-		}, 'single', ['photo', '.webp']);
+    	launchPicker(e, async function(files){
+			const sceneArray = [];
+			for(let i=0; i<files.length; i++){
+				await create_scene_inside(parentId, fullPath, files[i].name, files[i].link, sceneArray);
+			}
+			await AboveApi.migrateScenes(window.gameId, sceneArray);
+			if(sceneArray.length == 1){
+				const sceneIndex = window.ScenesHandler.scenes.findIndex((scene) => scene.id === sceneArray[0].id);
+				if (sceneIndex >= 0) {
+					edit_scene_dialog(sceneIndex, true);
+				}
+			}
+			did_update_scenes();
+		}, 'multiple', ['photo', '.webp']);
 	});
 
 
@@ -3572,13 +3540,10 @@ async function build_source_book_chapter_import_section(sceneSet) {
 				parentId: parentId,
 				...get_custom_scene_settings()
 			}
-			if(Array.isArray(sceneData[i].tokens)){
+			if(sceneData[i].tokens !== null && typeof sceneData[i].tokens === 'object'){
 				let tokensObject = {}
-				for(let token in sceneData[i].tokens){
-
-					let tokenId = sceneData[i].tokens[token].id;
-					let statBlockID = sceneData[i].tokens[token].statBlock
-					tokensObject[tokenId] = sceneData[i].tokens[token];		
+				for(let token of Object.values(sceneData[i].tokens)){
+					tokensObject[token.id] = token;		
 				}	
 				sceneData[i].tokens = tokensObject;
 			}
@@ -3855,12 +3820,10 @@ function build_tutorial_import_list_item(scene, logo, allowMagnific = true) {
 			parentId: parentId,
 			...get_custom_scene_settings()
 		};
-		if(Array.isArray(importData.tokens)){
+		if(importData.tokens !== null && typeof importData.tokens === 'object'){
 			let tokensObject = {}
-			for(let token in importData.tokens){
-
-				let tokenId = importData.tokens[token].id;
-				tokensObject[tokenId] = importData.tokens[token];		
+			for(let token of Object.values(importData.tokens)){
+				tokensObject[token.id] = token;		
 			}	
 			importData.tokens = tokensObject;
 		}

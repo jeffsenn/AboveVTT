@@ -1598,7 +1598,7 @@ function build_sidebar_list_row(listItem) {
   rowItem.append(imgHolder);
   if (listItem.type !== "aoe" && !listItem.isTypeScene()){
     let tokenCustomizations = find_token_customization(listItem.type, listItem.id);
-    let listingImage = (tokenCustomizations?.tokenOptions?.alternativeImages && tokenCustomizations.tokenOptions?.alternativeImages?.[0] != undefined) ? tokenCustomizations.tokenOptions.alternativeImages[0] : listItem.image; 
+    let listingImage = tokenCustomizations?.tokenOptions?.defaultImage != undefined ? tokenCustomizations.tokenOptions.defaultImage : (tokenCustomizations?.tokenOptions?.alternativeImages && tokenCustomizations.tokenOptions?.alternativeImages?.[0] != undefined) ? tokenCustomizations.tokenOptions.alternativeImages[0] : listItem.image; 
     let img;
     let video = false;
     let isAvttBucketFile = listingImage?.startsWith('above-bucket-not-a-url');
@@ -1894,9 +1894,6 @@ function build_sidebar_list_row(listItem) {
         const cr = window.JOURNAL.getCustomCR(statBlock);
         subtitle.append(`<div class="subtitle-attibute challenge-rating"><span class="plain-text">CR</span>${cr}</div>`)
       }
-     
-      // TODO: Style specifically for My Tokens
-      row.css("cursor", "default");
       break;
     case ItemType.PC:
       const pc = find_pc_by_player_id(listItem.sheet, false);
@@ -2069,7 +2066,6 @@ function build_sidebar_list_row(listItem) {
         $("#scenes-panel .dm_scenes_button.selected-scene").removeClass("selected-scene");
         $(clickEvent.currentTarget).addClass("selected-scene");
         window.MB.sendMessage("custom/myVTT/switch_scene", { sceneId: listItem.id, switch_dm: true });
-        add_zoom_to_storage();
       });
       let switch_players = $(`<button class='player_scenes_button token-row-button' title="Move Players To This Scene"></button>`);
       switch_players.append(svg_everyone());
@@ -2088,7 +2084,6 @@ function build_sidebar_list_row(listItem) {
         }
         window.splitPlayerScenes = {};
         $('#scenes-panel .sidebar-list-item-row-details~img').remove();
-        add_zoom_to_storage()
       });
       rowItem.append(switch_dm);
       rowItem.append(switch_players);
@@ -2963,6 +2958,28 @@ function display_folder_configure_modal(listItem) {
               </div>`;
 
   sidebarModal.body.append(folderColorInput);
+  if(listItem.id == RootFolder.Monsters.id){
+    const customization = find_or_create_token_customization(ItemType.Folder, listItem.id, listItem.parentId, RootFolder.MyTokens.id);
+    const includeDDBImage = {
+        name: "includeDDB",
+        label: "Include DDB Image",
+        type: 'dropdown',
+        options: [
+            { value: 'fullAvatarImage', label: 'Full Size and Token/Avatar Image', description: "Include monster's default avatar and/or full image when enabled. When disabled will only have the avatar image if no custom images are added." },
+            { value: 'fullImage', label: 'Full Size Image', description: "Include monster's default avatar and/or full image when enabled. When disabled will only have the avatar image if no custom images are added." },
+            { value: 'avatarImage', label: 'Token/Avatar Image', description: "Include monster's default avatar and/or full image when enabled. When disabled will only have the avatar image if no custom images are added." },
+            { value: false, label: 'Disabled', description: "Include monster's default avatar and/or full image when enabled. When disabled will only have the avatar image if no custom images are added." }
+        ],
+        defaultValue: false
+    };
+    const isIncludeDDB = customization?.allCombinedOptions()?.includeDDB;
+    const includeDDBToggle = build_dropdown_input(includeDDBImage, isIncludeDDB, function (key, value) {
+        customization.setTokenOption(key, value);
+        persist_token_customization(customization);     
+    });
+    sidebarModal.body.append(includeDDBToggle);
+}
+
   let colorPickers = sidebarModal.body.find('input.spectrum');
   colorPickers.spectrum({
       type: "color",
@@ -3216,6 +3233,117 @@ function build_and_display_sidebar_flyout(clientY, buildFunction) {
   });
 }
 
+async function setup_tooltip_flyout(flyout, tooltipHtmlString, classes = [], event, options = {id: undefined, token: undefined, container: undefined}) {
+  if(event == undefined){
+    console.warn('Event required for tooltip flyout', event);
+    return;
+  }
+  let container = options.container;
+  let currentTarget = $(event.currentTarget);
+  currentTarget.toggleClass('loading-tooltip', true);
+  if(container == undefined){
+
+    currentTarget.off('mousemove.cursor');
+    container = currentTarget.closest(".sidebar-flyout");
+    if(container.find('.tooltip-header').length === 0){
+      container = currentTarget.closest("#resizeDragMon");
+    }
+    if (container.length === 0) {
+        container = currentTarget.closest(".token");
+    }
+    if (container.length === 0) {
+        container = currentTarget.closest(".sidebar-modal");
+    }
+    if (container.length === 0) {
+        container = is_characters_page() ? $(".ct-sidebar__inner [class*='styles_content']") : $(".sidebar__pane-content");
+    }
+  }
+  const containerParentIdArray = container?.attr("data-parents-id") != undefined ? JSON.parse(container.attr("data-parents-id")) : [];
+  if(container?.attr("data-id") != undefined){
+    containerParentIdArray.push(container.attr("data-id"));
+  }
+  flyout.addClass(classes)
+  const flyoutId = uuid();
+  flyout.attr("data-id", flyoutId);
+  flyout.attr("data-parents-id", JSON.stringify(containerParentIdArray));
+  const tooltipHtml = $(tooltipHtmlString);
+  await window.JOURNAL.translateHtmlAndBlocks(tooltipHtml, options.id)
+  add_journal_roll_buttons(tooltipHtml, options.id);
+  add_aoe_statblock_click(tooltipHtml, options.id);
+  add_tooltip_aoe_buttons(tooltipHtml, options.id);
+  window.JOURNAL.add_journal_tooltip_targets(tooltipHtml);
+  window.JOURNAL.block_send_to_buttons(tooltipHtml);
+  add_stat_block_hover(tooltipHtml);
+  if(options.id != undefined || options.token != undefined)
+    tooltipHtml.find('.add-input').each(function(){window.JOURNAL.addTrackedInputs($(this), {noteId: options.id, token: options.token})})
+  flyout.find("a").attr("target", "_blank");
+  flyout.off('click').on('click', '.tooltip-hover[href*="https://www.dndbeyond.com/sources/dnd/"], .int_source_link ', function (event) {
+    event.preventDefault();
+    render_source_chapter_in_iframe(event.target.href);
+  });
+  flyout.append(tooltipHtml);
+  let sendToGamelogButton = $(`<a class="ddbeb-button" href="#">Send To Gamelog</a>`);
+  sendToGamelogButton.css({ "float": "right" });
+  sendToGamelogButton.on("click", function(ce) {
+      ce.stopPropagation();
+      ce.preventDefault();
+      const tooltipWithoutButton = $(tooltipHtmlString);
+      tooltipWithoutButton.css({
+          "width": "100%",
+          "max-width": "100%",
+          "min-width": "100%"
+      });
+      let outerHtml = $(tooltipWithoutButton[0].outerHTML);
+      outerHtml.find('style').remove();
+      send_html_to_gamelog(outerHtml[0].outerHTML);
+  });
+
+  const buttonFooter = $("<div></div>");
+  buttonFooter.css({
+      height: "40px",
+      width: "100%",
+      position: "relative",
+      background: "#fff"
+  });
+  flyout.append(buttonFooter);
+  buttonFooter.append(sendToGamelogButton);
+  if(options.container == undefined){
+      let flyoutLeft = event.clientX+20
+        if(flyoutLeft + 400 > window.innerWidth){
+          flyoutLeft = window.innerWidth - 420
+        }
+      flyout.css({
+        left: flyoutLeft,
+        width: '400px'
+      })
+  }else{
+    const didResize = position_flyout_on_best_side_of(container, flyout);
+    if (didResize) {
+        // only mess with the html that DDB gave us if we absolutely have to
+        tooltipHtml.css({
+            "width": "100%",
+            "max-width": "100%",
+            "min-width": "100%"
+        });
+    }
+
+  }
+  let flyoutTop = event.clientY;
+  let flyoutHeight = flyout.height() + 25;
+  let bottom = (event.clientY + flyoutHeight);
+  
+  if (bottom > window.innerHeight) {
+    flyoutTop = flyoutTop - (bottom - window.innerHeight) - 25;
+  }
+  flyout.css('top', flyoutTop);
+
+  flyout.hover(function (hoverEvent) {
+      remove_tooltip(500);
+  });
+  flyout.css("background-color", "#fff");
+  currentTarget.toggleClass('loading-tooltip', false);
+}
+
 function position_flyout_on_best_side_of(container, flyout, resizeFlyoutToFit = true) {
   let didResize = false;
   if (!container || container.length === 0 || !flyout || flyout.length === 0) {
@@ -3259,12 +3387,21 @@ function position_flyout_right_of(container, flyout) {
 function remove_sidebar_flyout(removeHoverNote) {
   console.log("remove_sidebar_flyout");
   let flyouts = $(`.sidebar-flyout`)
-  let hovered = $(`.tooltip-flyout:hover`).length>0 == true;
+  
   if(removeHoverNote == false){
     flyouts = $(`.sidebar-flyout:not('.note-flyout')`)
   }
-  if(!hovered)
-    flyouts.remove();
+  flyouts.each(function(i, flyout) {
+    const parentsData = $(flyout).attr("data-parents-id");
+    const dataId = $(flyout).attr("data-id");
+    const flyoutParentsIdArray = parentsData ? JSON.parse(parentsData) : [];
+    const hovered = (flyoutParentsIdArray.length == 0 
+                      ? $(`.sidebar-flyout:hover`).length>0 
+                      : $(flyout).is(":hover")) || $(`.sidebar-flyout[data-parents-id*="${dataId}"]:hover`).length>0;
+    
+    if(!hovered)
+      $(flyout).remove();
+  });
 }
 
 async function list_item_image_flyout(hoverEvent) {
@@ -3281,7 +3418,7 @@ async function list_item_image_flyout(hoverEvent) {
   }
 }
 
-function  disable_draggable_change_folder() {
+function  disable_draggable_change_folder(skipHide=false) {
 
   $(document).off("click.clearSelectScenes").on('click.clearSelectScenes', function(e) { 
     const target = $(e.target);
@@ -3290,7 +3427,7 @@ function  disable_draggable_change_folder() {
     }
   });
     
-  if(window.reorderState != undefined){
+  if(window.reorderState != undefined && !skipHide){
     window.reorderState = undefined;
     $(".token-row-drag-handle").remove();
 
@@ -3396,7 +3533,7 @@ function add_expand_collapse_buttons_to_header(sidebarPanel, addHideButton=false
  */
 async function enable_draggable_change_folder(listItemType) {
 
-  await disable_draggable_change_folder();
+  await disable_draggable_change_folder(true);
   window.reorderState = listItemType; // if you move the current scene, it will reload. When that happens, we need to know to re-enter this state.
   const droppableOptions = {
     greedy: true,
@@ -3438,7 +3575,6 @@ async function enable_draggable_change_folder(listItemType) {
             persist_token_customization(customization);
           }
           rebuild_token_items_list();
-          enable_draggable_change_folder(ItemType.PC);
         } else {
           console.warn("Unable to reorder item by dropping it on the body", window.reorderState, draggedItem);
         }

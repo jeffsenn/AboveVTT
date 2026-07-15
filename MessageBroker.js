@@ -47,6 +47,8 @@ const debounceHandleInjected = mydebounce(() => {
 					let doubleDamage = $(`<button class='applyDamageButton vulnerable'>2x${damageSVG}</button>`);
 					let quarterDamage = $(`<button class='applyDamageButton resist-save'>1/4 ${damageSVG}</button>`);
 					let healDamage = $(`<button class='applyDamageButton heal'>${healSVG}</button>`);
+					const saveButton = $(`<button class='applyDamageButton save'><svg xmlns="http://www.w3.org/2000/svg" fill="#000000" width="20px" height="20px" viewBox="10 10 540 540"><path d="M106.75 215.06L1.2 370.95c-3.08 5 .1 11.5 5.93 12.14l208.26 22.07-108.64-190.1zM7.41 315.43L82.7 193.08 6.06 147.1c-2.67-1.6-6.06.32-6.06 3.43v162.81c0 4.03 5.29 5.53 7.41 2.09zM18.25 423.6l194.4 87.66c5.3 2.45 11.35-1.43 11.35-7.26v-65.67l-203.55-22.3c-4.45-.5-6.23 5.59-2.2 7.57zm81.22-257.78L179.4 22.88c4.34-7.06-3.59-15.25-10.78-11.14L17.81 110.35c-2.47 1.62-2.39 5.26.13 6.78l81.53 48.69zM240 176h109.21L253.63 7.62C250.5 2.54 245.25 0 240 0s-10.5 2.54-13.63 7.62L130.79 176H240zm233.94-28.9l-76.64 45.99 75.29 122.35c2.11 3.44 7.41 1.94 7.41-2.1V150.53c0-3.11-3.39-5.03-6.06-3.43zm-93.41 18.72l81.53-48.7c2.53-1.52 2.6-5.16.13-6.78l-150.81-98.6c-7.19-4.11-15.12 4.08-10.78 11.14l79.93 142.94zm79.02 250.21L256 438.32v65.67c0 5.84 6.05 9.71 11.35 7.26l194.4-87.66c4.03-1.97 2.25-8.06-2.2-7.56zm-86.3-200.97l-108.63 190.1 208.26-22.07c5.83-.65 9.01-7.14 5.93-12.14L373.25 215.06zM240 208H139.57L240 383.75 340.43 208H240z"></path></svg></button>`);
+					const spellSaveText = $(current.data.injected_data?.text)?.find('.custom-spell-save-text')?.text();
 
 
 					damageButtonContainer.off('click.damage').on('click.damage', 'button', function(e){
@@ -76,7 +78,30 @@ const debounceHandleInjected = mydebounce(() => {
 						if($(`.tokenselected:not([data-id*='profile'])`).length == 0){
 							showTempMessage('No non-player tokens selected');
 						}
-						
+						if(clicked.hasClass('save')){
+							if(!childWindows['Quick Roll Menu'])
+								$("#qrm_dialog").show()
+							if ($('#quick_roll_area').length == 0){
+								close_token_context_menu()
+								const splitMsg = spellSaveText.split(" ");
+								const save = {
+									damage,
+									type: splitMsg[0],
+									dc: parseInt(splitMsg[1].replaceAll(/\D*/gi, "")),
+								}
+								open_quick_roll_menu(e, {left: 'calc(50% - 205px)', top: 'calc(50% - 234px)', save});
+							}
+							$("#qrm_clear_all").click();
+							forSelTokens((token, id) => {
+								add_to_quick_roll_menu(token, true)
+							})
+
+							$('#qrm_roll_button').click();
+							if(childWindows['Quick Roll Menu']){
+								qrm_update_popout();
+							}
+							return;
+						}
 						forSelTokens((token, id) => {
 							if(token.isPlayer() || token.isAoe()) return;
 							let newHp = Math.max(0, parseInt(token.hp) - parseInt(damage));
@@ -99,6 +124,9 @@ const debounceHandleInjected = mydebounce(() => {
 					}
 					else{
 						damageButtonContainer.append(damageButton, halfDamage, quarterDamage, doubleDamage, healDamage);
+					}
+					if(spellSaveText){
+						damageButtonContainer.append(saveButton);
 					}
 					
 					li.find(`[class*='MessageContainer-Flex']`).append(damageButtonContainer);
@@ -254,7 +282,8 @@ class MessageBroker {
 		if(is_gamelog_popout() || (!is_abovevtt_page()))
 			return;
 		let self=this;
-
+		if(window.pingInterval!=undefined)
+			clearInterval(window.pingInterval);
 		if (callback)
 			this.callbackAboveQueue.push(callback);
 		
@@ -316,6 +345,8 @@ class MessageBroker {
 			if(self.reconnectTimeout != undefined){
 				clearTimeout(self.reconnectTimeout);
 			}	
+			if(window.pingInterval!=undefined)
+				clearInterval(window.pingInterval);
 			console.log('Attempting reconnect to Above Websocket');
 			if(window.reconnectAttemptAbovews == undefined){
 				window.reconnectAttemptAbovews = 0;
@@ -762,7 +793,7 @@ class MessageBroker {
 									let doubleDamage = $(`<button class='applyDamageButton vulnerable'>2x${damageSVG}</button>`);
 									let quarterDamage = $(`<button class='applyDamageButton resist-save'>1/4 ${damageSVG}</button>`);
 									let healDamage = $(`<button class='applyDamageButton heal'>${healSVG}</button>`);
-
+									const saveButton = $(`<button class='applyDamageButton save'><svg xmlns="http://www.w3.org/2000/svg" fill="#000000" width="20px" height="20px" viewBox="10 10 540 540"><path d="M106.75 215.06L1.2 370.95c-3.08 5 .1 11.5 5.93 12.14l208.26 22.07-108.64-190.1zM7.41 315.43L82.7 193.08 6.06 147.1c-2.67-1.6-6.06.32-6.06 3.43v162.81c0 4.03 5.29 5.53 7.41 2.09zM18.25 423.6l194.4 87.66c5.3 2.45 11.35-1.43 11.35-7.26v-65.67l-203.55-22.3c-4.45-.5-6.23 5.59-2.2 7.57zm81.22-257.78L179.4 22.88c4.34-7.06-3.59-15.25-10.78-11.14L17.81 110.35c-2.47 1.62-2.39 5.26.13 6.78l81.53 48.69zM240 176h109.21L253.63 7.62C250.5 2.54 245.25 0 240 0s-10.5 2.54-13.63 7.62L130.79 176H240zm233.94-28.9l-76.64 45.99 75.29 122.35c2.11 3.44 7.41 1.94 7.41-2.1V150.53c0-3.11-3.39-5.03-6.06-3.43zm-93.41 18.72l81.53-48.7c2.53-1.52 2.6-5.16.13-6.78l-150.81-98.6c-7.19-4.11-15.12 4.08-10.78 11.14l79.93 142.94zm79.02 250.21L256 438.32v65.67c0 5.84 6.05 9.71 11.35 7.26l194.4-87.66c4.03-1.97 2.25-8.06-2.2-7.56zm-86.3-200.97l-108.63 190.1 208.26-22.07c5.83-.65 9.01-7.14 5.93-12.14L373.25 215.06zM240 208H139.57L240 383.75 340.43 208H240z"></path></svg></button>`);
 
 									damageButtonContainer.off('click.damage').on('click.damage', 'button', function (e) {
 										const clicked = $(e.currentTarget);
@@ -786,6 +817,30 @@ class MessageBroker {
 												msgType: 'gamelogDamageButtons',
 												damage: damage
 											});
+											return;
+										}
+										if(clicked.hasClass('save')){
+											if(!childWindows['Quick Roll Menu'])
+												$("#qrm_dialog").show()
+											if ($('#quick_roll_area').length == 0){
+												close_token_context_menu()
+												const splitMsg = msg.avttSpellSave.split(" ");
+												const save = {
+													damage,
+													type: splitMsg[0],
+													dc: parseInt(splitMsg[1].replaceAll(/\D*/gi, "")),
+												}
+												open_quick_roll_menu(e, {left: 'calc(50% - 205px)', top: 'calc(50% - 234px)', save});
+											}
+											$("#qrm_clear_all").click();
+											forSelTokens((token, id) => {
+												add_to_quick_roll_menu(token, true)
+											})
+
+											$('#qrm_roll_button').click();
+											if(childWindows['Quick Roll Menu']){
+												qrm_update_popout();
+											}
 											return;
 										}
 										if ($(`.tokenselected:not([data-id*='profile'])`).length == 0) {
@@ -814,6 +869,9 @@ class MessageBroker {
 									}
 									else {
 										damageButtonContainer.append(damageButton, halfDamage, quarterDamage, doubleDamage, healDamage);
+									}
+									if(msg.avttSpellSave !== undefined){
+										 damageButtonContainer.append(saveButton);
 									}
 
 									target.find(`[class*='MessageContainer-Flex']`).append(damageButtonContainer);
@@ -934,7 +992,7 @@ class MessageBroker {
 				let tokenid=msg.data.id;
 				if(tokenid in window.TOKEN_OBJECTS){
 					window.TOKEN_OBJECTS[tokenid].options.deleteableByPlayers = true;
-					window.TOKEN_OBJECTS[tokenid].delete(false);
+					window.TOKEN_OBJECTS[tokenid].delete(false, msg.data.removeFromCombatTracker);
 				}
 			} else if(msg.eventType == "custom/myVTT/createtoken"){
 				if(window.DM){
@@ -1629,6 +1687,7 @@ class MessageBroker {
 		}
 	}
 	async handleScene (msg, forceRefresh=false) {
+		
 		console.debug("handlescene", msg);
 		window.LOADING = true;
 		window.MB.checkHideSceneFromPlayers();
@@ -1659,6 +1718,9 @@ class MessageBroker {
 			
 			const isSameTokenLight = window.CURRENT_SCENE_DATA.disableSceneVision == msg.data.disableSceneVision;																		
 			
+			if(!isCurrentScene){
+				add_zoom_to_storage();
+			}
 
 			if(isSameScaleAndMaps && !forceRefresh){
 				delete window.LOADING;
@@ -1961,20 +2023,15 @@ class MessageBroker {
 						update_pc_token_rows();
 						$('.import-loading-indicator').remove();
 						delete window.LOADING;
-						
 
-
-
+						redraw_light();
 						do_check_token_visibility();
-						
+						if($('#portal_config_window').length>0)
+							open_portal_config();
 						$('#loadingStyles').remove();
 
-						console.groupEnd()
-
-						
+						console.groupEnd()	
 						window.MB.loadNextScene();	
-						
-						
 					});
 				}
 			}
@@ -1985,6 +2042,7 @@ class MessageBroker {
 			remove_loading_overlay();
 			showError(e);
 		}
+		
 		remove_loading_overlay();
 		// console.groupEnd()
 	}
@@ -2177,7 +2235,7 @@ class MessageBroker {
 
 		const centerView = data.highlightCenter == true;
 		delete msg.data.highlightCenter;
-
+		const ignoredSyncProperties = ["left", "top", "hidden", "scaleCreated", "groupId"]
 		if (msg.sceneId != window.CURRENT_SCENE_DATA.id || msg.loading) {
 			let gridSquares = parseFloat(data.gridSquares);
 			if (!isNaN(gridSquares)) {
@@ -2187,7 +2245,7 @@ class MessageBroker {
 			}
 			if (data.id in window.all_token_objects) {
 				for (let property in window.all_token_objects[data.id].options) {		
-					if(property == "left" || property == "top" || property == "hidden" || property == "scaleCreated")
+					if(ignoredSyncProperties.includes(property))
 						continue;
 					if(msg.loading){
 						data[property] = window.all_token_objects[data.id].options[property];
@@ -2219,8 +2277,9 @@ class MessageBroker {
 					delete window.visionBlockingTokenCache[data.id];
 				}
 			}
+			
 			for (let property in data) {
-				if(msg.sceneId != window.CURRENT_SCENE_DATA.id && (property == "left" || property == "top" || property == "hidden" || property == "scaleCreated"))
+				if(msg.sceneId != window.CURRENT_SCENE_DATA.id && ignoredSyncProperties.includes(property))
 					continue;	
 				if(window.all_token_objects[data.id] == undefined){
 					window.all_token_objects[data.id] = window.TOKEN_OBJECTS[data.id]	
@@ -2290,7 +2349,7 @@ class MessageBroker {
 		else if(data.left){
 
 			let t = new Token(data);
-			if(isNaN(parseFloat(t.options.left)) || isNaN(parseInt(t.options.top))){ // prevent errors with NaN positioned tokens - delete them as catch all. 
+			if(isNaN(parseInt(t.options.left)) || isNaN(parseInt(t.options.top))){ // prevent errors with NaN positioned tokens - delete them as catch all. 
 				t.options.deleteableByPlayers = true;
 				t.delete();
 				return;
@@ -2306,12 +2365,11 @@ class MessageBroker {
 				}	
 				debounce_pc_token_update();
 			}
-			t.place();
-
-
-			let playerTokenId = $(`.token[data-id*='${window.PLAYER_ID}']`).attr("data-id");
-			let playerTokenAuraIsLight = (playerTokenId == undefined) ? true : window.TOKEN_OBJECTS[playerTokenId].options.auraislight;
-			check_single_token_visibility(data.id);
+			t.place(0, undefined, ()=>{
+				if(!msg.loading)
+					check_single_token_visibility(data.id);
+			});
+			
 	
 		}
 	}
@@ -2426,20 +2484,20 @@ class MessageBroker {
 	}
 
 
-	sendMessage(eventType, data,skipSceneId=false) {
+	sendMessage(eventType, data,skipSceneId=false, forceSceneId = undefined) {
 		let self = this;
 
 		//this.sendDDBMB(eventType,data); 
 
 		if(eventType.startsWith("custom")){
-			this.sendAboveMB(eventType,data,skipSceneId);
+			this.sendAboveMB(eventType,data,skipSceneId,forceSceneId);
 		}
 		else{
 			this.sendDDBMB(eventType,data);
 		}
 	}
 
-	sendAboveMB(eventType,data,skipSceneId=false){
+	sendAboveMB(eventType,data,skipSceneId=false, forceSceneId=undefined){
 		let self=this;
 		let message = {
 			action: "sendmessage",
@@ -2453,10 +2511,13 @@ class MessageBroker {
 
 		if(!["custom/myVTT/switch_scene","custom/myVTT/update_scene"].includes(eventType))
 			message.sequence=this.above_sequence++;
-
-		if(window.CURRENT_SCENE_DATA && !skipSceneId)
+		if(forceSceneId != undefined){
+			message.sceneId = forceSceneId;
+		} else if(window.CURRENT_SCENE_DATA && !skipSceneId){
 			message.sceneId=window.CURRENT_SCENE_DATA.id;
-		if(window.PLAYER_SCENE_ID)
+		}
+
+		if(forceSceneId == undefined && window.PLAYER_SCENE_ID)
 			message.playersSceneId = window.PLAYER_SCENE_ID;
 
 		const jsmessage=JSON.stringify(message);

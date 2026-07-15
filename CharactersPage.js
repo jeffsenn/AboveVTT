@@ -713,6 +713,330 @@ const buffsDebuffs = {
     "newRoll": '1d20+10',
     "type": "spell",
   },
+  "Mark of Detection":{
+    "multiOptions": {
+      "d4": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": '.ct-skills__item:contains("Investigation"), .ct-skills__item:contains("Insight")' 
+        },
+        "newRoll": '$1+1d4',
+      },
+      "d6": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": '.ct-skills__item:contains("Investigation"), .ct-skills__item:contains("Insight")' 
+        },
+        "newRoll": '$1+1d6',
+      }
+    },
+    "type": "feat",
+  },
+  "Mark of Finding":{
+    "multiOptions": {
+      "d4": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": '.ct-skills__item:contains("Perception"), .ct-skills__item:contains("Survival")' 
+        },
+        "newRoll": '$1+1d4',
+      },
+      "d6": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": '.ct-skills__item:contains("Perception"), .ct-skills__item:contains("Survival")' 
+        },
+        "newRoll": '$1+1d6',
+      }
+    },
+    "type": "feat",
+  },
+  "Mark of Handling":{
+    "multiOptions": {
+      "d4": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": '.ct-skills__item:contains("Nature"), .ct-skills__item:contains("Animal Handling")' 
+        },
+        "newRoll": '$1+1d4',
+      },
+      "d6": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": '.ct-skills__item:contains("Nature"), .ct-skills__item:contains("Animal Handling")' 
+        },
+        "newRoll": '$1+1d6',
+      }
+    },
+    "type": "feat",
+  },
+  "Mark of Healing":{
+    "multiOptions": {
+      "d4": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": '.ct-skills__item:contains("Medicine"), .ct-skills__item:contains("Herbalism Kit")' 
+        },
+        "newRoll": '$1+1d4',
+      },
+      "d6": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": '.ct-skills__item:contains("Medicine"), .ct-skills__item:contains("Herbalism Kit")' 
+        },
+        "newRoll": '$1+1d6',
+      }
+    },
+    "type": "feat",
+  },
+  "Mark of Hospitality":{
+    "multiOptions": {
+      "d4": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": `.ct-skills__item:contains("Persuasion"), .ct-skills__item:contains("Brewer's Supplies"), .ct-skills__item:contains("Cook's Utensils")` 
+        },
+        "newRoll": '$1+1d4',
+      },
+      "d6": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": `.ct-skills__item:contains("Persuasion"), .ct-skills__item:contains("Brewer's Supplies"), .ct-skills__item:contains("Cook's Utensils")`
+        },
+        "newRoll": '$1+1d6',
+      }
+    },
+    "type": "feat",
+  },
+  "Mark of Making":{
+    "multiOptions": {
+      "d4": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": `.ct-skills__item:contains("Arcana"), .ct-skills__item:contains("Artisan's Tools")` 
+        },
+        "newRoll": '$1+1d4',
+      },
+      "d6": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": `.ct-skills__item:contains("Arcana"), .ct-skills__item:contains("Artisan's Tools")`
+        },
+        "newRoll": '$1+1d6',
+      }
+    },
+    "type": "feat",
+  },
+  "Mark of Passage":{
+    "multiOptions": {
+      "d4": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": `.ct-skills__item:contains("Athletics"), .ct-skills__item:contains("Acrobatics")` 
+        },
+        "newRoll": '$1+1d4',
+      },
+      "d6": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": `.ct-skills__item:contains("Athletics"), .ct-skills__item:contains("Acrobatics")`
+        },
+        "newRoll": '$1+1d6',
+      }
+    },
+    "type": "feat",
+  },
+  "Mark of Scribing":{
+    "multiOptions": {
+      "d4": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": `.ct-skills__item:contains("Intelligence"), .ct-skills__item:contains("Calligrapher's Supplies")` 
+        },
+        "newRoll": '$1+1d4',
+      },
+      "d6": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": `.ct-skills__item:contains("Intelligence"), .ct-skills__item:contains("Calligrapher's Supplies")`
+        },
+        "newRoll": '$1+1d6',
+      }
+    },
+    "type": "feat",
+  },
+  "Mark of Sentinel":{
+    "multiOptions": {
+      "d4": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": `.ct-skills__item:contains("Insight"), .ct-skills__item:contains("Perception")` 
+        },
+        "newRoll": '$1+1d4',
+      },
+      "d6": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": `.ct-skills__item:contains("Insight"), .ct-skills__item:contains("Perception")`
+        },
+        "newRoll": '$1+1d6',
+      }
+    },
+    "type": "feat",
+  },
+  "Mark of Shadow":{
+    "multiOptions": {
+      "d4": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": `.ct-skills__item:contains("Stealth"), .ct-skills__item:contains("Performance")` 
+        },
+        "newRoll": '$1+1d4',
+      },
+      "d6": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": `.ct-skills__item:contains("Stealth"), .ct-skills__item:contains("Performance")`
+        },
+        "newRoll": '$1+1d6',
+      }
+    },
+    "type": "feat",
+  },
+  "Mark of Storm":{
+    "multiOptions": {
+      "d4": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": `.ct-skills__item:contains("Acrobatics"), .ct-skills__item:contains("Navigator's Tools")` 
+        },
+        "newRoll": '$1+1d4',
+      },
+      "d6": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": `.ct-skills__item:contains("Acrobatics"), .ct-skills__item:contains("Navigator's Tools")`
+        },
+        "newRoll": '$1+1d6',
+      }
+    },
+    "type": "feat",
+  },
+  "Mark of Warding":{
+    "multiOptions": {
+      "d4": {
+        "tohit": "0",
+        "dmg": "0",
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": `.ct-skills__item:contains("Investigation"), .ct-skills__item:contains("Thieves' Tools")` 
+        },
+        "newRoll": '$1+1d4',
+      },
+      "d6": {
+        "tohit": "0",
+        "dmg": "0", 
+        "save": "0",
+        "check": "0",
+        "replace": /(.)$/gi,//last character
+        "replaceType": {
+          "check": `.ct-skills__item:contains("Investigation"), .ct-skills__item:contains("Thieves' Tools")`
+        },
+        "newRoll": '$1+1d6',
+      }
+    },
+    "type": "feat",
+  },
   "Great Weapon Fighting": {
     "multiOptions": {
       "2024": { 
@@ -1230,6 +1554,7 @@ function init_character_list_page_without_avtt() {
     window.location_href_observer.disconnect();
     delete window.location_href_observer;
   }
+
   window.location_href_observer = new MutationObserver(function(mutationList, observer) {
     if (oldHref !== document.location.href) {
       if(is_characters_builder_page()){
@@ -1740,21 +2065,26 @@ function observe_character_sheet_changes(documentToObserve) {
   if (window.character_sheet_observer) {
     window.character_sheet_observer.disconnect();
   }
+  if(window.sendToDefaultObserver)
+    window.sendToDefaultObserver.disconnect();
   window.sendToDefaultObserver = new MutationObserver(function () {
     localStorage.setItem(`${window.gameId != undefined ? window.gameId : window.myUser}-sendToDefault`, gamelog_send_to_text());
   })
-  let watchForNewDicePanel = new MutationObserver((mutations) => {
+
+ if(window.charWatchForNewDicePanel)
+    window.charWatchForNewDicePanel.disconnect();
+  window.charWatchForNewDicePanel = new MutationObserver((mutations) => {
     mutations.every(async (mutation) => {
       if (!mutation.addedNodes) return
 
       for (let i = 0; i < mutation.addedNodes.length; i++) {
-        if (watchForNewDicePanel.done)
+        if (window.charWatchForNewDicePanel.done)
           continue;
         let node = mutation.addedNodes[i]
         if ((node.className == 'dice-rolling-panel' || $('.dice-rolling-panel').length > 0)) {
           if ($('[data-floating-ui-portal]').length>0){
-            watchForNewDicePanel.done = 1;
-            watchForNewDicePanel.disconnect();
+            window.charWatchForNewDicePanel.done = 1;
+            window.charWatchForNewDicePanel.disconnect();
             $('[data-floating-ui-portal], .roll-mod-container').addClass('hidden');
             await $("[class*='DiceContainer_button']").click(); // initialize dice panel so first roll doesn't fail
             setTimeout(async () => {
@@ -1766,7 +2096,7 @@ function observe_character_sheet_changes(documentToObserve) {
                 })
               }, 200)
             }, 200);
-            watchForNewDicePanel.disconnect();
+            window.charWatchForNewDicePanel.disconnect();
             return false;
           }
         }
@@ -1774,8 +2104,11 @@ function observe_character_sheet_changes(documentToObserve) {
       return true // must return true if doesn't break
     })
   });
-  watchForNewDicePanel.observe(document.body, { childList: true, subtree: true, attributes: false, characterData: false });
-  let gamelogObserver = new MutationObserver((mutations) => {
+  window.charWatchForNewDicePanel.observe(document.body, { childList: true, subtree: true, attributes: false, characterData: false });
+  
+  if(window.charGamelogObserver)
+    window.charGamelogObserver.disconnect();
+  window.charGamelogObserver = new MutationObserver((mutations) => {
     mutations.every((mutation) => {
       if (!mutation.addedNodes) return
       for (let i = 0; i < mutation.addedNodes.length; i++) {
@@ -1792,8 +2125,10 @@ function observe_character_sheet_changes(documentToObserve) {
     })
   });
 
-  gamelogObserver.observe(document.body, { childList: true, subtree: true, attributes: false, characterData: false });
+  window.charGamelogObserver.observe(document.body, { childList: true, subtree: true, attributes: false, characterData: false });
 
+  if(window.character_sheet_observer)
+    window.character_sheet_observer.disconnect();
   window.character_sheet_observer = new MutationObserver(function(mutationList, observer) {
     if(window.DRAGGING || (typeof arrowKeysHeld !== 'undefined' && (arrowKeysHeld[0] || arrowKeysHeld[1] || arrowKeysHeld[2] || arrowKeysHeld[3])))
       return;
@@ -2810,7 +3145,9 @@ function observe_character_sheet_changes(documentToObserve) {
                 background: #ced9e0 !important;
               }
 
-
+              .ct-sidebar__inner [class*='styles_creatureBlock'] [class*='styles_statTable'] .avtt-roll-button {
+                  padding: 0px 2px !important;
+              }
               .ct-sidebar__inner [class*='ddbc-creature-block'] .avtt-roll-button,
               .ct-sidebar__inner [class*='styles_creatureBlock'] .avtt-roll-button,
               .ct-sidebar__inner [class*='styles_creatureBlock'] .avtt-aoe-button,
@@ -3102,7 +3439,8 @@ function observe_character_sheet_changes(documentToObserve) {
 
 function observe_non_sheet_changes(documentToObserve) {
 
-
+  if(window.non_sheet_observer)
+    window.non_sheet_observer.disconnect();
   window.non_sheet_observer = new MutationObserver(function(mutationList, observer) {
     if(window.DRAGGING || (typeof arrowKeysHeld !== 'undefined' && (arrowKeysHeld[0] || arrowKeysHeld[1] || arrowKeysHeld[2] || arrowKeysHeld[3])))
       return;

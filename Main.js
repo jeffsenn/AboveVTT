@@ -157,17 +157,18 @@ function change_zoom(newZoom, x, y, reset = false) {
 	
     if(!window.WIZARDING)
 		draw_svg_grid(); // scale grid so lines are always visible
-	if(reset != true){
-		$(window).scrollLeft(pageX);
-		$(window).scrollTop(pageY);	
-	}
+
 
 	$('#VTTWRAPPER').css({
 		"--window-zoom": window.ZOOM,
 	})
 	debounce_font_change();	
 	set_default_vttwrapper_size();
-	if(reset == true){
+	if(reset != true){
+		$(window).scrollLeft(pageX);
+		$(window).scrollTop(pageY);	
+	}
+	else {
 		//this was changed from scrollIntoView to calculate the center and scrollTo as if loaded in an iframe it would scroll the parent window in firefox
 		const sceneMap = $("#scene_map")[0];
 
@@ -197,27 +198,29 @@ function add_zoom_to_storage() {
 	console.group("add_zoom_to_storage");
 	console.log("storing zoom");
 
-	if(window.ZOOM !== get_reset_zoom()) {
-		const zooms = JSON.parse(localStorage.getItem('zoom')) || [];
-		const zoomIndex = zooms.findIndex(zoom => zoom.title === window.CURRENT_SCENE_DATA.title);
-		const centerView = center_of_view(); 
-		const sidebarSize = ($('#hide_rightpanel.point-right').length>0 ? get_sidebar_width() : 0);
-		if (zoomIndex !== -1) {
-			zooms[zoomIndex].zoom = window.ZOOM;
-			zooms[zoomIndex].leftOffset = window.scrollX + window.innerWidth/2 - sidebarSize/2;
-			zooms[zoomIndex].topOffset = window.scrollY + window.innerHeight/2;
-		}
-		else{
-			// zoom doesn't exist
-			zooms.push({
-				"title": window.CURRENT_SCENE_DATA.title,
-				"zoom":window.ZOOM,
-				"leftOffset": window.scrollX + window.innerWidth/2 - sidebarSize/2,
-				"topOffset": window.scrollY + window.innerHeight/2
-			});
-		}
-		localStorage.setItem('zoom', JSON.stringify(zooms));
-	} else {console.log("zoom has not changed, skipping storage")}
+	const currentDate = Date.now();
+	const zooms = JSON.parse(localStorage.getItem('zoom'))?.filter(z=> !z.title && z.expiryDate != undefined && z.expiryDate>currentDate) || []; // filter out old data that used to be based on scene title rather then id and remove older data to prevent long term storage issues
+	const centerView = center_of_view(); 
+	const sidebarSize = ($('#hide_rightpanel.point-right').length>0 ? get_sidebar_width() : 0);
+	const saved = zooms.find(zoom => zoom.id === window.CURRENT_SCENE_DATA.id);
+	if (saved != undefined) {
+		saved.zoom = window.ZOOM;
+		saved.leftOffset = window.scrollX + window.innerWidth/2 - sidebarSize/2;
+		saved.topOffset = window.scrollY + window.innerHeight/2;
+		saved.expiryDate = currentDate + (30 * 24 * 60 * 60 * 1000) ;
+	}
+	else{
+		// zoom doesn't exist
+		zooms.push({
+			"zoom":window.ZOOM,
+			"leftOffset": window.scrollX + window.innerWidth/2 - sidebarSize/2,
+			"topOffset": window.scrollY + window.innerHeight/2,
+			"id": window.CURRENT_SCENE_DATA.id,
+			"expiryDate": currentDate + (30 * 24 * 60 * 60 * 1000) // 30 days from now
+		});
+	}
+	localStorage.setItem('zoom', JSON.stringify(zooms));
+	
 
 	console.groupEnd("add_zoom_to_storage")
 }
@@ -226,24 +229,22 @@ function add_zoom_to_storage() {
 * Sets default values for VTTWRAPPER and black_layer based off zoom.
 */
 function set_default_vttwrapper_size() {
-	const vttwrapper = $("#VTTWRAPPER");
-	const scene_map = $("#scene_map");
 	const black_layer = $("#black_layer");
-	const scalezoom = window.CURRENT_SCENE_DATA.scale_factor * window.ZOOM;
-	const w = $("#scene_map").width() * scalezoom;
-	const h = $("#scene_map").height() * scalezoom;
-	vttwrapper.width(w + 1400);
-	vttwrapper.height(h + 1400);
-	black_layer.width(w + 2000 + window.VTTMargin );
-	black_layer.height(h + 2000 + window.VTTMargin );
+	const sceneMapSize = getSceneMapSize();
+	const w = sceneMapSize.sceneWidth * window.ZOOM * window.CURRENT_SCENE_DATA.scale_factor;
+	const h = sceneMapSize.sceneHeight * window.ZOOM * window.CURRENT_SCENE_DATA.scale_factor;
+	black_layer.width(w + 2000 + window.VTTMargin);
+	black_layer.height(h + 2000 + window.VTTMargin);
+
 }
 
 /**
  * Removes the zoom for the current scene from local storage, applied when user click "fit zoom" button.
  */
-function remove_zoom_from_storage() {
-	const zooms = JSON.parse(localStorage.getItem('zoom')) || [];
-	const zoomIndex = zooms.findIndex(zoom => zoom.title === window.CURRENT_SCENE_DATA.title);
+function remove_zoom_from_storage(sceneId = window.CURRENT_SCENE_DATA.id) {
+	const currentDate = Date.now();
+	const zooms = JSON.parse(localStorage.getItem('zoom'))?.filter(z=> !z.title && z.expiryDate != undefined && z.expiryDate>currentDate) || [];
+	const zoomIndex = zooms.findIndex(zoom => zoom.id === sceneId);
 	if (zoomIndex !== -1) {
 		console.log("removing zoom from storage", zooms[zoomIndex]);
 		zooms.splice(zoomIndex, 1);
@@ -269,8 +270,9 @@ function apply_zoom_from_storage() {
 	else{
 		const zoomState = localStorage.getItem("zoom");
 		if (zoomState != null) {
-			const zooms = JSON.parse(zoomState);
-			const zoomIndex = zooms.findIndex(zoom => zoom.title === window.CURRENT_SCENE_DATA.title);
+			const currentDate = Date.now();
+			const zooms = JSON.parse(zoomState)?.filter(z => !z.title && z.expiryDate != undefined && z.expiryDate>currentDate) || [];
+			const zoomIndex = zooms.findIndex(zoom => zoom.id === window.CURRENT_SCENE_DATA.id);
 			if(zoomIndex !== -1) {
 				console.log("restoring zoom level", zooms[zoomIndex]);
 				change_zoom(zooms[zoomIndex].zoom)
@@ -517,15 +519,15 @@ async function load_scenemap(url, is_video = false, width = null, height = null,
 						e.target.setVolume(25);
 					e.target.playVideo();
 
-	        const loopTime = window.YTPLAYER.playerInfo.duration - 0.15;
+	        		const loopTime = window.YTPLAYER.playerInfo.duration - 0.15;
 
-	        window.YTINTERVAL = setInterval(function (){
-	          const current_time = window.YTPLAYER.getCurrentTime();
-	          if (current_time > loopTime) {
-	            	window.YTPLAYER.seekTo(0);
+					window.YTINTERVAL = setInterval(function (){
+						const current_time = window.YTPLAYER.getCurrentTime();
+						if (current_time > loopTime) {
+								window.YTPLAYER.seekTo(0);
 								window.YTPLAYER.playVideo();
-	          }
-	        }, 10);
+						}
+					}, 10);
 				}			
 			}
 		});
@@ -781,6 +783,10 @@ async function popout_all_selected_token_stat(){
 	forSelTokensAsync(async (token) => {
 		let container;
 		if(token.isPlayer()) return;
+
+		const allowedToOpen = window.DM || token.options.player_owned;
+		if(!allowedToOpen)
+			return;
 		if (token.options.statBlock) {
 			const {customStatBlock, pcURL} = token.getCustomPcUrl();
 			if (pcURL) return;
@@ -814,9 +820,13 @@ function open_selected_token_stat() {
 	const selectedTokens = window.CURRENTLY_SELECTED_TOKENS;
 	if (!selectedTokens || selectedTokens.length < 1)
 		return;
-
+	
 	const token = window.TOKEN_OBJECTS[selectedTokens[0]];
-	if (token.isPlayer()) {
+	const isPlayerToken = token.isPlayer();
+	const allowedToOpen = window.DM || isPlayerToken || token.options.player_owned;
+	if(!allowedToOpen)
+		return;
+	if (isPlayerToken) {
 		open_player_sheet(token.options.sheet, undefined, token.options.name);
 	}
 	else if (token.options.statBlock) {
@@ -1264,6 +1274,8 @@ const MAX_ZOOM_STEP = 20
  * Register event for mousewheel zoom.
  */
 function init_mouse_zoom() {
+	if(window.mouseZoomInitialized) return;
+	window.mouseZoomInitialized = true;
 	window.addEventListener('wheel', function (e) {
 		if (e.ctrlKey) {
 			e.preventDefault();
@@ -1556,8 +1568,9 @@ function observe_character_sheet_companion(documentToObserve){
 		let tokenName = $(this).parent().find('.ddbc-extra-name').find("span").text()
 		console.log("pretending to add a companion ", tokenName)
 	}
-
-	let companion_observer = new MutationObserver(function() {
+	if(window.companion_observer) 
+		window.companion_observer.disconnect();
+	window.companion_observer = new MutationObserver(function() {
 		let extras = documentToObserve.find(".ct-extra-row__preview:not('.above-vtt-visited')");
 		if (extras.length > 0){
 			extras.wrap(function() {
@@ -2100,7 +2113,7 @@ function init_ui() {
 	$(".sidebar").css("z-index", 9999);
 	// $(".ct-sidebar__control").width(340);
 	$("body").css("overflow", "scroll");
-
+	$('#lightbox, #lightboxOverlay').remove();
 	apply_sidebar_width(get_sidebar_width());
 	init_sidebar_resize_handle();
 
@@ -2349,23 +2362,19 @@ function init_ui() {
 	wrapper = $("<div id='VTTWRAPPER' class='TLA'/>");
 	wrapper.css("margin-left", `${window.VTTMargin}px`);
 	wrapper.css("margin-top", `${window.VTTMargin}px`);
-	wrapper.css("paddning-right", "200px");
+	wrapper.css("padding-right", "200px");
 	wrapper.css("padding-bottom", "200px");
-	wrapper.width(window.width);
-	wrapper.height(window.height);
+
 
 	wrapper.append(VTT);
 	$("body").append(wrapper);
 
 	black_layer = $("<div id='black_layer' class='TLA'/>");
-	black_layer.width(window.width+window.VTTMargin);
-	black_layer.height(window.height+window.VTTMargin);
 	black_layer.css("background", "black");
 	black_layer.css("opacity", "0");
 	$("body").append(black_layer);
 	black_layer.animate({ opacity: "1" }, 1000);
 	black_layer.css("z-index", "1");
-
 	black_layer.off('contextmenu').on('contextmenu', function(e){
 		e.preventDefault();
 	})
@@ -2387,14 +2396,17 @@ function init_ui() {
 	init_combat_tracker();
 
 	token_menu();
+	
 	install_grabbers(); //do it once instead of every time
-
 	// EXPERIMENTAL DRAG TO MOVE
 	let  curDown = false,
 		curYPos = 0,
 		curXPos = 0;
 
 	// Function separated so it can be dis/enabled
+	const throttleScroll = throttle((scrollOptions) => {
+		requestAnimationFrame(function(){window.scrollTo(scrollOptions)})
+	}, 30)
 	function mousemove(m) {
 		if (curDown) {
 			let scrollOptions = {
@@ -2402,9 +2414,7 @@ function init_ui() {
 				top: window.scrollY + curYPos - m.pageY,
 				behavior: "instant"
 			}
-			requestAnimationFrame(function(){
-				window.scrollTo(scrollOptions)
-			});
+			throttleScroll(scrollOptions)
 		}
 	}
 
@@ -3026,37 +3036,37 @@ function checkForExportRemind() {
 		const lastSaved = localStorage.getItem(storageKey);
 		return lastSaved ? (Date.now() - parseInt(lastSaved, 10)) / 86400000 : NaN;
 	}
-	function hideExportReminder() {
-		const exportReminder = $(`#exportReminder`);
-		if (exportReminder.length > 0){
-			exportReminder.hide();
-		}
-		
-	}
+
 	function showExportReminder() {
-		const exportReminder = $(`#exportReminder`);
-		if (exportReminder.length > 0){
+		let exportReminder = $(`#exportReminder`);
+		if(exportReminder.length > 0) {
 			exportReminder.show();
-		} else {
-			const exportReminder = find_or_create_generic_draggable_window("exportReminder", "Export Reminder", false, false, '#exportReminder', '40%', '10%', '10%', '10%', false, '', true);
-			const days = daysPassedSinceExport();
-			exportReminder.append(
-				$(`<div style="background: #fff">
-				It is time to do an export of this campaign.
-				<button id="exportRemindButton">Export</button>
-				</div>`)
-			);
-			$('#exportRemindButton').click(function (e) {
-				e.stopPropagation();
-				export_file('', true);
-				hideExportReminder();
-			});
-			exportReminder.show();
+			return;
 		}
+		exportReminder = find_or_create_generic_draggable_window("exportReminder", "Export Reminder", false, false, '#exportReminder', 'fit-content', '10%', '10%', '10%', false, '', false, true);	
+		exportReminder.append(
+			$(`<div style="background: #fff;
+								padding: 20px;
+								display: flex;
+								align-items: center;
+								flex-direction: column;
+								gap: 5px;
+								font-size: 16px;
+								font-weight: bold;
+							">
+			<span>It is time to do an export of this campaign.</span>
+			<button id="exportRemindButton">Export</button>
+			</div>`)
+		);
+		$('#exportRemindButton').click(function (e) {
+			e.stopPropagation();
+			export_file('', true);
+			$(`#exportReminder .title_bar_close_button`).click();
+		});
 	}
 	const remindSetting = get_avtt_setting_value('exportRemind');
 	const days = daysPassedSinceExport();
-	if(remindSetting && (isNaN(days) || days > parseInt(remindSetting))) {
+	if(remindSetting != 0 && (isNaN(days) || days > parseInt(remindSetting))) {
 		showExportReminder();
 	}
 }
@@ -3102,6 +3112,7 @@ function init_loading_overlay_beholder() {
  * Initializes the help menu.
  */
 function init_help_menu() {
+	const linkSvg = `<svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 0 24 24" width="18px" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none"></path><path d="M18 19H6c-.55 0-1-.45-1-1V6c0-.55.45-1 1-1h5c.55 0 1-.45 1-1s-.45-1-1-1H5c-1.11 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-6c0-.55-.45-1-1-1s-1 .45-1 1v5c0 .55-.45 1-1 1zM14 4c0 .55.45 1 1 1h2.59l-9.13 9.13c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0L19 6.41V9c0 .55.45 1 1 1s1-.45 1-1V4c0-.55-.45-1-1-1h-5c-.55 0-1 .45-1 1z"></path></svg>`
 	$('body').append(`
 		<div id="help-container">
 			<div id="help-menu-outside"></div>
@@ -3109,7 +3120,8 @@ function init_help_menu() {
 				<div class="help-tabs">
 					<ul>
 						<li class="active"><a href="#tab1">Keyboard/Mouse shortcuts</a></li>
-						<li><a href="#tab19" class='popout' data-href="https://github.com/cyruzzo/AboveVTT/wiki" data-name='AboveVTT Wiki'>Wiki <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 0 24 24" width="18px" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none"></path><path d="M18 19H6c-.55 0-1-.45-1-1V6c0-.55.45-1 1-1h5c.55 0 1-.45 1-1s-.45-1-1-1H5c-1.11 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-6c0-.55-.45-1-1-1s-1 .45-1 1v5c0 .55-.45 1-1 1zM14 4c0 .55.45 1 1 1h2.59l-9.13 9.13c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0L19 6.41V9c0 .55.45 1 1 1s1-.45 1-1V4c0-.55-.45-1-1-1h-5c-.55 0-1 .45-1 1z"></path></svg></a></li>
+						<li><a href="#" class='popout' data-href="https://github.com/cyruzzo/AboveVTT/wiki" data-name='AboveVTT Wiki'>Wiki ${linkSvg}</a></li>
+						<li><a href="#" class="popout" data-href="https://www.youtube.com/watch?v=AaSClv4jSbk&list=PLW0tvNe3gIM00xQCReTWi8CPrXBJyDQmG" data-name="AboveVTT Tutorial Playlist">Video Tutorial Playlist ${linkSvg}</a></li>
 						<li><a href="#tab2">FAQ</a></li>
 						<li><a href="#tab3">Scene Creation</a></li>
 						<li><a href="#tab4">Player UI</a></li>
@@ -3122,7 +3134,6 @@ function init_help_menu() {
 						<li><a href="#tab11">In-person tools</a></li>
 						<li><a href="#tab12">Performance Suggestions</a></li>
 						<!-- some unused numbers here for more tabs -->
-						<li><a href="#tab20">Video Tutorial Playlist</a></li>
 						<li><a href="#tab21">Get Help</a></li>		
 						<li><a href="#tab22">Compatible Tools</a></li>
 					</ul>
@@ -3289,6 +3300,10 @@ function init_help_menu() {
 							<dd>Toggle always show walls. Will also show 'hidden icon' doors/windows.</dd>
 						</dl>
 						<dl>
+							<dt>${getShiftKeyName()}+P</dt>
+							<dd>Open portal config window.</dd>
+						</dl>
+						<dl>
 							<dt>${getShiftKeyName()}+E</dt>
 							<dd>Toggle always show elevation. Will always show elevation areas.</dd>
 						</dl>
@@ -3385,10 +3400,11 @@ function init_help_menu() {
 					<div id="tab10" class='googledoc bookmark' data-src="https://docs.google.com/document/d/e/2PACX-1vRSJ6Izvldq5c9z_d-9-Maa8ng1SUK2mGSQWkPjtJip0cy9dxAwAug58AmT9zRtJmiUx5Vhkp7hATSt/pub?embedded=true#h.it30rzhxilz3"></div>
 					<div id="tab11" class='googledoc bookmark' data-src="https://docs.google.com/document/d/e/2PACX-1vRSJ6Izvldq5c9z_d-9-Maa8ng1SUK2mGSQWkPjtJip0cy9dxAwAug58AmT9zRtJmiUx5Vhkp7hATSt/pub?embedded=true#h.6jh5zmtqvn3f"></div>
 					<div id="tab12" class='googledoc bookmark' data-src="https://docs.google.com/document/d/e/2PACX-1vRSJ6Izvldq5c9z_d-9-Maa8ng1SUK2mGSQWkPjtJip0cy9dxAwAug58AmT9zRtJmiUx5Vhkp7hATSt/pub?embedded=true#h.mob2z6z5azn2"></div>
-
+					<!-- Youtube iframe does not currently show playlist data, changed this to a external link
 					<div id="tab20">
 						<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/videoseries?list=PLW0tvNe3gIM00xQCReTWi8CPrXBJyDQmG&rel=0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-					</div>
+					</div> 
+					-->
 					<div id="tab21">
 						AboveVTT is an open source project. The developers build it in their free time, and rely on users to report and troubleshoot bugs. If you're experiencing a bug, here are a few options: 
 						<ul id="help-error-container">
@@ -3821,7 +3837,7 @@ function toggle_sidebar_visibility() {
  * It will also adjust the position of the character sheet .
  */
 function show_sidebar(dispatchResize = true) {
-
+	$('#avtt-sidebar-resize-handle').show();
 	let toggleButton = $("#hide_rightpanel");
 	toggleButton.addClass("point-right").removeClass("point-left");
 	toggleButton.attr('data-visible', 1);
@@ -3911,6 +3927,14 @@ function popoutGamelogCleanup(){
 		body{
 			overflow: hidden !important;
 		}
+
+		body .sidebar__pane-content {
+			--sidebar-width: 100%;
+			max-width: 100% !important;
+		}
+		body.body-rpgcampaign-details .gamelogcontainer>.sidebar {
+			top: 0 !important;
+		}
 		.sidebar__inner,
 		.sidebar,
 		.sidebar__pane-content,
@@ -3991,6 +4015,7 @@ function hide_sidebar(triggerResize = true) {
 	toggleButton.addClass("point-left").removeClass("point-right");
 	toggleButton.attr('data-visible', 0);
 	window.showPanel = false;
+	$('#avtt-sidebar-resize-handle').hide();
 	if (is_characters_page() && window.innerWidth < 1024) {
 		if($(`[class*='styles_mobileNav']>div`).length == 0)
 			$(`[class*='styles_mobileNav']>button`).click();

@@ -449,13 +449,19 @@ function filter_token_list(searchTerm) {
  */
 function inject_monster_tokens(searchTerm, skip, addedList=[]) {
     console.log("inject_monster_tokens about to call search_monsters");
+    const monsterFolderTitle = $('#monstersFolder>.sidebar-list-item-row-item:first-of-type .sidebar-list-item-row-details-title');
+    if(monsterFolderTitle.find('.beholder-dm-screen').length==0){
+        const beholderSvg = $(`<svg class="beholder-dm-screen loading-status-indicator__svg animate" viewBox="0 0 285 176" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 50px;position: absolute;padding: 0px;display: inline;left: 110px;top: 2px;"><defs><path id="beholder-eye-move-path" d="M0 0 a 15 5 0 0 0 15 0 a 15 5 0 0 1 -15 0 z"></path><clipPath id="beholder-eye-socket-clip-path"><path id="eye-socket" fill-rule="evenodd" clip-rule="evenodd" d="M145.5 76c-8.562 0-15.5-7.027-15.5-15.694 0-8.663 6.938-1.575 15.5-1.575 8.562 0 15.5-7.088 15.5 1.575C161 68.973 154.062 76 145.5 76z"></path></clipPath></defs><g class="beholder-dm-screen__beholder"><path fill-rule="evenodd" clip-rule="evenodd" d="M145.313 77.36c-10.2 0-18.466-8.27-18.466-18.47 0-10.197 8.266-1.855 18.466-1.855 10.199 0 18.465-8.342 18.465 1.855 0 10.2-8.266 18.47-18.465 18.47m59.557 4.296l-.083-.057c-.704-.5-1.367-1.03-1.965-1.59a12.643 12.643 0 0 1-1.57-1.801c-.909-1.268-1.51-2.653-1.859-4.175-.355-1.521-.461-3.179-.442-4.977.007-.897.049-1.835.087-2.827.038-.995.079-2.032.053-3.194-.031-1.158-.11-2.445-.519-3.97a10.494 10.494 0 0 0-1.014-2.43 8.978 8.978 0 0 0-1.938-2.32 9.64 9.64 0 0 0-2.468-1.54l-.314-.137-.299-.114-.609-.212c-.382-.105-.787-.227-1.151-.298-1.495-.315-2.819-.383-4.065-.39-1.248-.004-2.407.087-3.534.2a56.971 56.971 0 0 0-3.18.44c-6.271.646-12.648 1.559-13.689-.837-1.079-2.487-3.35-8.058 3.115-12.19 4.076.154 8.141.347 12.179.62 1.461.098 2.914.212 4.36.34-4.614.924-9.314 1.7-14.019 2.43h-.015a2.845 2.845 0 0 0-2.388 3.066 2.84 2.84 0 0 0 3.088 2.574c5.125-.462 10.25-.973 15.416-1.696 2.592-.378 5.17-.776 7.88-1.42a29.7 29.7 0 0 0 2.108-.59c.181-.06.363-.117.56-.193.197-.072.378-.136.594-.227.208-.09.405-.17.643-.291l.345-.174.394-.235c.064-.042.124-.076.196-.125l.235-.174.235-.174.117-.099.148-.136c.098-.094.189-.189.283-.287l.137-.152a3.44 3.44 0 0 0 .166-.22c.114-.154.224-.317.318-.484l.072-.125.038-.064.042-.09a5.06 5.06 0 0 0 .367-1.154c.045-.308.06-.63.045-.944a4.322 4.322 0 0 0-.042-.458 5.19 5.19 0 0 0-.386-1.207 5.356 5.356 0 0 0-.499-.799l-.091-.117-.072-.083a5.828 5.828 0 0 0-.303-.318l-.155-.151-.083-.076-.057-.05a9.998 9.998 0 0 0-.503-.382c-.152-.102-.28-.178-.424-.265l-.205-.124-.181-.091-.36-.186a18.713 18.713 0 0 0-.643-.28l-.591-.23c-1.521-.538-2.853-.856-4.197-1.159a83.606 83.606 0 0 0-3.951-.772c-2.604-.45-5.185-.829-7.763-1.166-4.273-.564-8.531-1.029-12.785-1.46 0-.004-.004-.004-.004-.004a38.55 38.55 0 0 0-4.81-3.1v-.004c.397-.223.965-.424 1.688-.549 1.135-.208 2.551-.242 4.05-.185 3.024.11 6.366.59 10.022.662 1.832.02 3.781-.056 5.84-.56a12.415 12.415 0 0 0 3.081-1.188 10.429 10.429 0 0 0 2.702-2.135 2.841 2.841 0 0 0-3.774-4.205l-.208.152c-.825.594-1.76.87-2.956.942-1.188.068-2.566-.09-4.004-.367-2.907-.553-6.003-1.556-9.5-2.32-1.763-.371-3.644-.7-5.802-.73a16.984 16.984 0 0 0-3.455.298 13.236 13.236 0 0 0-3.774 1.333 13.065 13.065 0 0 0-3.376 2.615 14.67 14.67 0 0 0-1.646 2.154h-.004a41.49 41.49 0 0 0-8.436-.863c-1.518 0-3.017.079-4.489.238-1.79-1.563-3.444-3.198-4.833-4.913a21.527 21.527 0 0 1-1.4-1.903 15.588 15.588 0 0 1-1.094-1.893c-.606-1.241-.905-2.422-.893-3.22a3.38 3.38 0 0 1 .038-.55c.034-.155.06-.31.121-.446.106-.273.276-.534.571-.776.579-.496 1.681-.81 2.884-.689 1.207.114 2.487.629 3.615 1.476 1.135.848 2.111 2.044 2.868 3.444l.038.076a2.848 2.848 0 0 0 3.471 1.329 2.843 2.843 0 0 0 1.714-3.641c-.768-2.135-1.96-4.235-3.675-6.003-1.71-1.76-3.924-3.18-6.502-3.872a12.604 12.604 0 0 0-4.076-.416 11.248 11.248 0 0 0-4.284 1.128 10.405 10.405 0 0 0-3.702 3.054c-.499.655-.901 1.37-1.237 2.104-.318.73-.568 1.488-.731 2.237-.337 1.503-.356 2.96-.238 4.315.125 1.362.405 2.63.764 3.822.36 1.196.803 2.317 1.298 3.373a31.9 31.9 0 0 0 1.605 3.043c.458.768.935 1.506 1.427 2.233h-.004a39.13 39.13 0 0 0-4.515 2.384c-3.111-.344-6.2-.76-9.242-1.294-2.033-.364-4.043-.769-6.007-1.26-1.96-.485-3.876-1.045-5.662-1.726a24.74 24.74 0 0 1-2.528-1.102c-.772-.393-1.48-.829-1.987-1.234a4.916 4.916 0 0 1-.56-.507c-.02-.015-.03-.03-.046-.045.288-.28.761-.621 1.314-.905.719-.382 1.566-.711 2.456-.984 1.79-.556 3.762-.9 5.76-1.098l.046-.007a2.843 2.843 0 0 0 2.547-2.805 2.846 2.846 0 0 0-2.824-2.868c-2.301-.02-4.628.11-7.028.567-1.2.231-2.418.538-3.671 1.022-.628.246-1.26.526-1.911.901a10.12 10.12 0 0 0-1.96 1.446c-.648.62-1.307 1.438-1.757 2.524-.114.261-.197.56-.284.844a7.996 7.996 0 0 0-.166.909c-.061.609-.05 1.237.049 1.809.189 1.162.632 2.12 1.109 2.891a11.265 11.265 0 0 0 1.529 1.942c1.056 1.082 2.127 1.88 3.194 2.6a33.287 33.287 0 0 0 3.21 1.855c2.142 1.093 4.284 1.979 6.434 2.774a98.121 98.121 0 0 0 6.464 2.112c.511.147 1.018.291 1.529.435a36.8 36.8 0 0 0-4.458 7.089v.004c-1.908-2.014-3.876-3.997-6.022-5.931a52.386 52.386 0 0 0-3.471-2.888 31.347 31.347 0 0 0-2.028-1.408 17.575 17.575 0 0 0-2.574-1.378 11.177 11.177 0 0 0-1.888-.616c-.761-.16-1.73-.31-3.02-.107a6.543 6.543 0 0 0-1.007.254 6.508 6.508 0 0 0-2.79 1.84 6.7 6.7 0 0 0-.594.783c-.083.129-.174.269-.238.39a7.248 7.248 0 0 0-.681 1.692 9.383 9.383 0 0 0-.3 2.02c-.022.584 0 1.09.038 1.568.084.953.231 1.786.401 2.577l.39 1.764c.027.14.065.268.087.408l.057.428.121.855.065.428.033.443.072.886c.061.586.061 1.196.076 1.801.05 2.426-.11 4.92-.435 7.407a50.6 50.6 0 0 1-1.503 7.35c-.17.594-.367 1.17-.548 1.76a55.283 55.283 0 0 1-.632 1.684l-.352.791c-.061.129-.114.276-.178.39l-.193.356-.186.355c-.064.121-.129.246-.193.326-.129.185-.257.375-.378.575l-.303.485a2.813 2.813 0 0 0 4.462 3.387c.295-.322.59-.655.878-.988.155-.17.265-.333.382-.496l.349-.488.344-.492c.117-.166.2-.325.303-.492l.583-.98a53.92 53.92 0 0 0 1.018-1.964c.295-.659.61-1.321.89-1.984a58.231 58.231 0 0 0 2.69-8.114 58.405 58.405 0 0 0 1.51-8.493c.068-.73.152-1.454.167-2.203l.045-1.12.02-.56-.012-.568-.004-.205c.167.186.333.371.496.557 1.608 1.84 3.179 3.838 4.708 5.889a181.94 181.94 0 0 1 4.481 6.328c.14.2.311.428.477.617.284.33.594.62.924.874 0 .216.003.424.015.636-2.661 2.861-5.265 5.821-7.748 9.034-1.567 2.06-3.096 4.19-4.485 6.715-.685 1.267-1.347 2.645-1.854 4.363-.246.879-.454 1.851-.496 3.02l-.007.44.022.473c.012.159.02.314.038.477.023.166.05.337.076.503.113.666.333 1.385.65 2.07.16.337.356.67.557.992.212.299.44.613.681.878a8.075 8.075 0 0 0 1.54 1.328c1.05.697 2.04 1.06 2.938 1.31 1.79.466 3.292.519 4.723.507 2.842-.053 5.367-.48 7.853-.98 4.943-1.022 9.618-2.434 14.243-3.948a2.845 2.845 0 0 0 1.911-3.236 2.842 2.842 0 0 0-3.323-2.267h-.015c-4.648.878-9.322 1.635-13.864 1.965-2.252.155-4.511.208-6.46-.027a10.954 10.954 0 0 1-1.685-.322c.004-.015.012-.026.015-.037.133-.273.322-.606.534-.954.235-.36.477-.73.768-1.117 1.14-1.548 2.619-3.164 4.183-4.723a83.551 83.551 0 0 1 2.585-2.468 35.897 35.897 0 0 0 2.312 4.16c.125.2.261.405.397.602 3.747-.413 7.415-1.06 10.356-1.617l.037-.007a7.47 7.47 0 0 1 8.702 5.957 7.491 7.491 0 0 1-4.724 8.38C132.172 94.372 138.542 96 145.313 96c20.358 0 37.087-14.708 38.994-33.514.193-.05.386-.098.576-.144a23.261 23.261 0 0 1 2.354-.458c.726-.102 1.393-.14 1.847-.125.125-.004.193.015.299.012.03.003.064.007.098.007h.053c.008.004.015.004.027.004.106 0 .094-.019.09-.068-.007-.05-.022-.125.019-.117.038.007.125.083.216.26.087.19.186.443.269.761.079.33.159.69.219 1.102.129.806.216 1.745.307 2.725.091.984.178 2.02.306 3.1.262 2.138.682 4.435 1.533 6.683.837 2.245 2.154 4.406 3.812 6.15.825.871 1.725 1.655 2.66 2.336.943.677 1.919 1.26 2.911 1.782a2.848 2.848 0 0 0 3.641-.874 2.848 2.848 0 0 0-.674-3.966" fill="#0398F3"></path><g clip-path="url(#beholder-eye-socket-clip-path)"><circle cx="137.5" cy="60" r="7" fill="#1B9AF0"><animateMotion dur="2.3s" repeatCount="indefinite"><mpath xlink:href="#beholder-eye-move-path"></mpath></animateMotion></circle></g></g><g class="beholder-dm-screen__screen"><path fill="#EAEEF0" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" d="M76 76h136v97H76z"></path><path d="M218 170.926V74.282l64-35.208v96.644l-64 35.208zM70 171.026V74.318L3 38.974v96.708l67 35.344z" fill="#F3F6F9" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"></path></g></svg>`);
+        monsterFolderTitle.append(beholderSvg);
+    }
+
     search_monsters(searchTerm, skip, function (monsterSearchResponse) {
         let listItems = addedList;
         let remainderItems = 0;
 
         for (let i = 0; i < monsterSearchResponse.data.length; i++) {
             if(listItems.length == 10){
-                remainderItems = 10 - i;
+                remainderItems = 100 - i;
                 break;
             }
             let m = monsterSearchResponse.data[i];
@@ -463,13 +469,28 @@ function inject_monster_tokens(searchTerm, skip, addedList=[]) {
             if(window.ownedMonstersOnly && !item.monsterData.isReleased && item.monsterData.homebrewStatus == 0){
                 continue;   
             }
+
+            
+            if(Array.isArray(window.sourceCategoryMonsterFilter) && window.sourceCategoryMonsterFilter.length>0){
+                const sourceList = {};
+                const sourceCategory = window.ddbConfigJson.sources.map((s) => {
+                    sourceList[s.id] = s.sourceCategoryId;
+                });
+                const sourceIdMap = item.monsterData.sources.map(s => { return sourceList[s.sourceId] })
+                const set = new Set(window.sourceCategoryMonsterFilter);
+                const hasMatch = sourceIdMap.some(value => set.has(`${value}`) || set.has(value)); 
+                if(!hasMatch)
+                    continue;
+            }
+                
+
             window.monsterListItems.push(item);
             listItems.push(item);
         }
         console.log("search_monsters converted", listItems);
         let monsterFolder = find_html_row_from_path(RootFolder.Monsters.path, tokensPanel.body);
-        if(listItems.length < 10 && monsterSearchResponse.pagination.total > (monsterSearchResponse.pagination.skip + 10)){
-           inject_monster_tokens(searchTerm, skip + 10, listItems);
+        if(listItems.length < 10 && monsterSearchResponse.pagination.total > (monsterSearchResponse.pagination.skip + 100)){
+           inject_monster_tokens(searchTerm, skip + 100, listItems);
         }
         else{
             inject_monster_list_items(listItems);
@@ -478,16 +499,17 @@ function inject_monster_tokens(searchTerm, skip, addedList=[]) {
             }     
             console.log("search_monster pagination ", monsterSearchResponse.pagination.total, monsterSearchResponse.pagination.skip, monsterSearchResponse.pagination.total > monsterSearchResponse.pagination.skip);
             monsterFolder.find(".load-more-button").remove();
-            if (monsterSearchResponse.pagination.total > (monsterSearchResponse.pagination.skip - remainderItems + 10)) {
+            if (monsterSearchResponse.pagination.total > (monsterSearchResponse.pagination.skip - remainderItems + 100)) {
                 // add load more button
                 let loadMoreButton = $(`<button class="ddbeb-button load-more-button" data-skip="${monsterSearchResponse.pagination.skip}">Load More</button>`);
                 loadMoreButton.click(function(loadMoreClickEvent) {
                     console.log("load more!", loadMoreClickEvent);
                     let previousSkip = parseInt($(loadMoreClickEvent.currentTarget).attr("data-skip"));
-                    inject_monster_tokens(searchTerm, previousSkip - remainderItems + 10);
+                    inject_monster_tokens(searchTerm, previousSkip - remainderItems + 100);
                 });
                 monsterFolder.find(`> .folder-item-list`).append(loadMoreButton);
             }
+            monsterFolderTitle.find('.beholder-dm-screen').remove();
         }   
     });
 }
@@ -770,7 +792,7 @@ async function enable_draggable_token_creation(html, specificImage = undefined) 
                     helper.attr("src", specificImage);
                 } else {      
                     let src = random_image_for_item(draggedItem);
-                    if(draggedItem.type == ItemType.PC){
+                    if(draggedItem.type == ItemType.PC && find_token_customization(draggedItem.type, draggedItem.id)?.tokenOptions?.defaultImage == undefined){
                         src = window.all_token_objects?.[draggedItem.id]?.options?.imgsrc || src;
                     }  
                     helper.attr("data-src", src);
@@ -898,7 +920,7 @@ async function enable_draggable_token_creation(html, specificImage = undefined) 
                     if (ui.helper.attr("data-shape") && ui.helper.attr("data-style")) {
                         src = build_aoe_img_name(ui.helper.attr("data-style"), ui.helper.attr("data-shape"));
                     }
-                    create_and_place_token(draggedItem, hidden, src, event.pageX, event.pageY, true, undefined, undefined, undefined, true);
+                    create_and_place_token(draggedItem, hidden, src, event.pageX, event.pageY, true, undefined, undefined, undefined);
                 }
                 else{
                     const listItemArray = [];
@@ -1008,7 +1030,11 @@ function update_pc_token_rows() {
             });    
             let customizations = find_token_customization(listItem.type, listItem.id);
             
-            let rowImage = (customizations?.tokenOptions?.alternativeImages?.length > 0) ? customizations?.tokenOptions?.alternativeImages[0] : pc.image;
+            let rowImage =  customizations?.tokenOptions?.defaultImage != undefined 
+                                ? customizations.tokenOptions.defaultImage 
+                                : (customizations?.tokenOptions?.alternativeImages?.length > 0) 
+                                    ? customizations?.tokenOptions?.alternativeImages[0] 
+                                    : pc.image;
             if (rowImage.startsWith('above-bucket-not-a-url')){
                 getAvttStorageUrl(avttTokensApplyThumbnailPrefix(rowImage), true).then((url) => {
                     row.find(".token-image").attr('src', url)
@@ -1095,6 +1121,16 @@ function update_pc_token_rows() {
     });
 }
 
+function random_number_suffix(suffixNumbers = []) {
+    let base = suffixNumbers.length + 100
+    let randomNumber = Math.floor(Math.random() * base);
+    while (suffixNumbers.includes(randomNumber)) {
+        randomNumber = Math.floor(Math.random() * base);
+        base+=10;
+    }
+    return randomNumber;
+}
+
 /**
  * Creates a {Token} object and places it on the scene.
  * @param listItem {SidebarListItem} the item to create a token from
@@ -1107,14 +1143,14 @@ function update_pc_token_rows() {
  */
 
 
-async function create_and_place_token(listItem, hidden = undefined, specificImage= undefined, eventPageX = undefined, eventPageY = undefined, disableSnap = false, nameOverride = "", mapPoint=false, extraOptions=undefined, ignoreOffset=false) {
+async function create_and_place_token(listItem, hidden = undefined, specificImage= undefined, eventPageX = undefined, eventPageY = undefined, disableSnap = false, nameOverride = "", mapPoint=false, extraOptions=undefined) {
 
 
     if (listItem === undefined) {
         console.warn("create_and_place_token was called without a listItem");
         return;
     }
-
+    
     if (listItem.isTypeFolder() || listItem.isTypeEncounter()) {
 
         let tokensToPlace = [];
@@ -1184,7 +1220,8 @@ async function create_and_place_token(listItem, hidden = undefined, specificImag
     options = {...options, ...foundOptions}; // we may need to put this in specific places within the switch statement below
     const chosenImage = random_image_for_item(listItem, specificImage);
     options.imgsrc = chosenImage;
-
+    options.alternativeImages = includeDDBImages(options.alternativeImages, listItem, options);
+            
 
     if(options.alternativeImagesCustomizations != undefined && options.alternativeImagesCustomizations[options.imgsrc] != undefined){
         const visionOptions = {
@@ -1202,11 +1239,11 @@ async function create_and_place_token(listItem, hidden = undefined, specificImag
         if(options.vision != undefined && options.vision?.feet == undefined && visionOptions?.vision?.feet != undefined){
             options.vision.feet = visionOptions.vision.feet;
         }
-        if(options.devilsight != undefined && options.devilsight?.feet == undefined && devilsightOptions?.devilsight?.feet != undefined){
-            options.devilsight.feet = devilsightOptions.devilsight.feet;
+        if(options.devilsight != undefined && options.devilsight?.feet == undefined && visionOptions?.devilsight?.feet != undefined){
+            options.devilsight.feet = visionOptions.devilsight.feet;
         }
-        if(options.truesight != undefined && options.truesight?.feet == undefined && truesightOptions?.truesight?.feet != undefined){
-            options.truesight.feet = truesightOptions.truesight.feet;
+        if(options.truesight != undefined && options.truesight?.feet == undefined && visionOptions?.truesight?.feet != undefined){
+            options.truesight.feet = visionOptions.truesight.feet;
         }
          if(options.light1 != undefined && options.light1?.feet == undefined && visionOptions?.light1?.feet != undefined){
             options.light1.feet = visionOptions.light1.feet;
@@ -1224,6 +1261,7 @@ async function create_and_place_token(listItem, hidden = undefined, specificImag
     let hpVal;
     let placedCount;
     let color;
+    let appendedNumbers = [];
     switch (listItem.type) {
         case ItemType.Folder:
             console.log("TODO: place all tokens in folder?", listItem);
@@ -1243,9 +1281,16 @@ async function create_and_place_token(listItem, hidden = undefined, specificImag
                 options.tokenSize = tokenSize;
             }
             placedCount = 1;
+            
             for (let tokenId in window.TOKEN_OBJECTS) {
                 if (window.TOKEN_OBJECTS[tokenId].options.itemId === listItem.id) {
                     placedCount++;
+                    if(options.placeType == 'random'){
+                        const nameNumberMatch = window.TOKEN_OBJECTS[tokenId].options.name.match(/(\d+)$/);
+                        if (nameNumberMatch) {
+                            appendedNumbers.push(parseInt(nameNumberMatch[1]));
+                        }
+                    }
                 }
             }
             color = TOKEN_COLORS[(placedCount - 1) % 54];
@@ -1257,6 +1302,10 @@ async function create_and_place_token(listItem, hidden = undefined, specificImag
                     options.name = ` ${personailityTrait} ${listItem.name}`;
                     break;
                 case 'none':
+                    break;
+                case 'random':
+                    const randomNumber = random_number_suffix(appendedNumbers);
+                    options.name = `${listItem.name} ${randomNumber}`;
                     break;
                 case 'count': 
                 default:    
@@ -1279,6 +1328,9 @@ async function create_and_place_token(listItem, hidden = undefined, specificImag
                 options = {...options, ...window.all_token_objects[options.id].options}
                 if (specificImage) { 
                     options = { ...options, ...options.alternativeImagesCustomizations?.[specificImage], imgsrc: chosenImage };
+                }       
+                else if (options.defaultImage !== undefined) {
+                     options = { ...options, ...options.alternativeImagesCustomizations?.[specificImage], imgsrc: chosenImage };
                 }
             }
             options.color = color_from_pc_object(pc);
@@ -1297,7 +1349,7 @@ async function create_and_place_token(listItem, hidden = undefined, specificImag
                 options.hitPointInfo = pc.hitPointInfo;
                 options.armorClass = pc.armorClass;
             }
-            options = {...options, ...foundOptions, name: listItem.name};
+            options.name = listItem.name;
             break;
         case ItemType.Monster:
             switch (options['defaultmaxhptype']) {
@@ -1329,9 +1381,16 @@ async function create_and_place_token(listItem, hidden = undefined, specificImag
             options.stat = listItem.monsterData.id;
 
             placedCount = 1;
+            appendedNumbers = [];
             for (let tokenId in window.TOKEN_OBJECTS) {
                 if (window.TOKEN_OBJECTS[tokenId].options.monster === listItem.monsterData.id || window.TOKEN_OBJECTS[tokenId].options.stat === listItem.monsterData.id) {
                     placedCount++;
+                    if(options.placeType == 'random'){
+                        const nameNumberMatch = window.TOKEN_OBJECTS[tokenId].options.name.match(/(\d+)$/);
+                        if (nameNumberMatch) {
+                            appendedNumbers.push(parseInt(nameNumberMatch[1]));
+                        }
+                    }
                 }
             }
             color = TOKEN_COLORS[(placedCount - 1) % 54];
@@ -1343,6 +1402,10 @@ async function create_and_place_token(listItem, hidden = undefined, specificImag
                     options.name = ` ${personailityTrait} ${listItem.name}`;
                     break;
                 case 'none':
+                    break;
+                case 'random':
+                    const randomNumber = random_number_suffix(appendedNumbers);
+                    options.name = `${listItem.name} ${randomNumber}`;
                     break;
                 case 'count': 
                 default:    
@@ -1404,9 +1467,16 @@ async function create_and_place_token(listItem, hidden = undefined, specificImag
             options.monster = "open5e";
             options.stat = listItem.monsterData.key;
             placedCount = 1;
+            appendedNumbers = [];
             for (let tokenId in window.TOKEN_OBJECTS) {
                 if (window.TOKEN_OBJECTS[tokenId].options.monster === listItem.monsterData.key || window.TOKEN_OBJECTS[tokenId].options.stat === listItem.monsterData.key) {
                     placedCount++;
+                    if(options.placeType == 'random'){
+                        const nameNumberMatch = window.TOKEN_OBJECTS[tokenId].options.name.match(/(\d+)$/);
+                        if (nameNumberMatch) {
+                            appendedNumbers.push(parseInt(nameNumberMatch[1]));
+                        }
+                    }
                 }
             }
             color = TOKEN_COLORS[(placedCount - 1) % 54];
@@ -1419,6 +1489,10 @@ async function create_and_place_token(listItem, hidden = undefined, specificImag
                     options.name = ` ${personailityTrait} ${listItem.name}`;
                     break;
                 case 'none':
+                    break;
+                case 'random':
+                    const randomNumber = random_number_suffix(appendedNumbers);
+                    options.name = `${listItem.name} ${randomNumber}`;
                     break;
                 case 'count': 
                 default:    
@@ -1443,9 +1517,16 @@ async function create_and_place_token(listItem, hidden = undefined, specificImag
                 options.tokenSize = tokenSize;
             }
             placedCount = 1;
+            appendedNumbers = [];
             for (let tokenId in window.TOKEN_OBJECTS) {
                 if (window.TOKEN_OBJECTS[tokenId].options.itemId === listItem.id) {
-                    placedCount++;
+                    placedCount++;          
+                    if(options.placeType == 'random'){
+                        const nameNumberMatch = window.TOKEN_OBJECTS[tokenId].options.name.match(/(\d+)$/);
+                        if (nameNumberMatch) {
+                            appendedNumbers.push(parseInt(nameNumberMatch[1]));
+                        }
+                    }
                 }
             }
             color = TOKEN_COLORS[(placedCount - 1) % 54];
@@ -1457,6 +1538,10 @@ async function create_and_place_token(listItem, hidden = undefined, specificImag
                     options.name = ` ${personailityTrait} ${listItem.name}`;
                     break;
                 case 'none':
+                    break;
+                case 'random':
+                    const randomNumber = random_number_suffix(appendedNumbers);
+                    options.name = `${listItem.name} ${randomNumber}`;
                     break;
                 case 'count': 
                 default:    
@@ -1674,9 +1759,9 @@ async function create_and_place_token(listItem, hidden = undefined, specificImag
         }
         options.monster = 'customStat'
     }
-    if(foundOptions.color != undefined){
-        options.color = foundOptions.color;
-    }
+    
+    options.color = options.color ?? foundOptions.color;
+    
 
 
 
@@ -1707,7 +1792,7 @@ async function create_and_place_token(listItem, hidden = undefined, specificImag
     if (eventPageX === undefined || eventPageY === undefined) {
         place_token_in_center_of_view(options);
     } else if(mapPoint==false){
-        let mapPosition = convert_point_from_view_to_map(eventPageX, eventPageY, disableSnap, ignoreOffset);
+        let mapPosition = convert_point_from_view_to_map(eventPageX, eventPageY, disableSnap);
         place_token_at_map_point(options, mapPosition.x, mapPosition.y);
     }
     else{
@@ -1781,7 +1866,7 @@ function alternative_images_for_item(listItem) {
             alternativeImages = listItem.tokenOptions.alternativeImages;
             break;
     }
-
+    alternativeImages = includeDDBImages(alternativeImages, listItem, find_token_options_for_list_item(listItem));
     if (alternativeImages === undefined) {
         alternativeImages = [];
     }
@@ -1796,15 +1881,20 @@ function alternative_images_for_item(listItem) {
  * @returns {string} the url an image associated with the provided listItem
  */
 function random_image_for_item(listItem, specificImage) {
-    let validSpecifiedImage = parse_img(specificImage);
+    const validSpecifiedImage = parse_img(specificImage);
     if (validSpecifiedImage !== undefined && validSpecifiedImage.length > 0) {
         console.debug("random_image_for_item validSpecifiedImage", validSpecifiedImage);
         return validSpecifiedImage
     }
-
-    let alternativeImages = alternative_images_for_item(listItem);
+    const customizations = find_token_customization(listItem.type, listItem.id);
+    const validDefaultImage = parse_img(customizations?.tokenOptions?.defaultImage);
+    if (validDefaultImage !== undefined && validDefaultImage.length > 0) {
+        console.debug("random_image_for_item validDefaultImage", validDefaultImage);
+        return validDefaultImage
+    }
+    const alternativeImages = alternative_images_for_item(listItem);
     if (alternativeImages !== undefined && alternativeImages.length > 0) {
-        let randomIndex = getRandomInt(0, alternativeImages.length);
+        const randomIndex = getRandomInt(0, alternativeImages.length);
         console.debug("random_image_for_item", alternativeImages, randomIndex);
         return parse_img(alternativeImages[randomIndex]);
     } else {
@@ -1837,9 +1927,9 @@ function search_monsters(searchTerm, skip, callback) {
     if (filterParams.length > 0) {
         searchParam += `&${filterParams}`;
     }
-    console.log(`search_monsters calling API https://monster-service.dndbeyond.com/v1/Monster?skip=${offset}&take=10${searchParam}`);
+    console.log(`search_monsters calling API https://monster-service.dndbeyond.com/v1/Monster?skip=${offset}&take=100${searchParam}`);
     window.ajaxQueue.addDDBRequest({
-        url: `https://monster-service.dndbeyond.com/v1/Monster?skip=${offset}&take=10${searchParam}`,
+        url: `https://monster-service.dndbeyond.com/v1/Monster?skip=${offset}&take=100${searchParam}`,
         success: function (responseData) {
             console.log(`search_monsters succeeded`, responseData);
             callback(responseData);
@@ -2712,24 +2802,24 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
             return; // no need to do anything if the image wasn't added. This can happen if they accidentally hit enter a few times which would try to add the same url multiple times
         }
         if(listItem.type == ItemType.PC ){
-            const id = customization.tokenOptions.id;
+            const id = targetOptions.id;
             let token = window.all_token_objects[id]
             if (token)
-                window.all_token_objects[id].options.alternativeImages = customization.tokenOptions.alternativeImages;
+                window.all_token_objects[id].options.alternativeImages = targetOptions.alternativeImages;
            
             token = window.TOKEN_OBJECTS[id]
             if (token){
-                token.options.alternativeImages = customization.tokenOptions.alternativeImages;
-                token.sync(await $.extend(true, {}, token.options))
+                token.options.alternativeImages = targetOptions.alternativeImages;
+                token.sync()
             }
         }
         if(['.mp4', '.webm', '.m4v'].some(d => type.includes(d))){
-            customization.tokenOptions.videoToken = true;
+            targetOptions.videoToken = true;
         }
         persist_token_customization(customization);
         if (redraw) {
             debounceRedrawToken(sidebarPanel, listItem, placedToken);
-            let listingImage = (customization.tokenOptions?.alternativeImages && customization.tokenOptions?.alternativeImages[0] != undefined) ? customization.tokenOptions?.alternativeImages[0] : listItem.image;     
+            let listingImage = (targetOptions?.alternativeImages && targetOptions?.alternativeImages[0] != undefined) ? targetOptions?.alternativeImages[0] : listItem.image;     
            
 
             let rowImage;
@@ -2791,7 +2881,27 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
 
         
     }
-
+    if(listItem?.isTypeMonster()){
+        const includeDDBImage = {
+            name: "includeDDB",
+            label: "Include DDB Image",
+            type: 'dropdown',
+            options: [
+                { value: 'fullAvatarImage', label: 'Full Size and Token/Avatar Image', description: "Include monster's default avatar and/or full image when enabled. When disabled will only have the avatar image if no custom images are added." },
+                { value: 'fullImage', label: 'Full Size Image', description: "Include monster's default avatar and/or full image when enabled. When disabled will only have the avatar image if no custom images are added." },
+                { value: 'avatarImage', label: 'Token/Avatar Image', description: "Include monster's default avatar and/or full image when enabled. When disabled will only have the avatar image if no custom images are added." },
+                { value: false, label: 'Disabled', description: "Include monster's default avatar and/or full image when enabled. When disabled will only have the avatar image if no custom images are added." }
+            ],
+            defaultValue: false
+        };
+        const isIncludeDDB = customization?.allCombinedOptions()?.includeDDB;
+        const includeDDBToggle = build_dropdown_input(includeDDBImage, isIncludeDDB, function (key, value) {
+            customization.setTokenOption(key, value);
+            persist_token_customization(customization);
+            redraw_token_images_in_modal(sidebarPanel, listItem, placedToken);
+        });
+        inputWrapper.append(includeDDBToggle);
+    }
 
 
     if(!listItem?.isTypeBuiltinToken() && !listItem?.isTypeDDBToken()){
@@ -2813,7 +2923,7 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
             
             let rowImage;
             let alt = $(`.sidebar-list-item-row[id='${listItem.id}'] .token-image`).attr('alt')
-            let listingImage = (customization.tokenOptions?.alternativeImages && customization.tokenOptions?.alternativeImages[0] != undefined) ? customization.tokenOptions?.alternativeImages[0] : listItem.image;
+            let listingImage = (targetOptions?.alternativeImages && targetOptions?.alternativeImages[0] != undefined) ? targetOptions?.alternativeImages[0] : listItem.image;
             
             let video=false;
             if(isVideoValue || (['.mp4', '.webm', '.m4v'].some(d => listingImage.includes(d)))){
@@ -2917,7 +3027,7 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
     }
      console.log("TOKENSIZES", tokenSizes);
      let tokenSizeInput = build_token_size_input(tokenSizes, function (newSize) {
-              console.log("TOKEN NEW SIZES", newSize);
+        console.log("TOKEN NEW SIZES", newSize);
         customization.setTokenOption("tokenSize", newSize);
         persist_token_customization(customization);
         decorate_modal_images(sidebarPanel, listItem, placedToken);
@@ -2925,7 +3035,7 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
     inputWrapper.append(tokenSizeInput);
 
     // image scale
-    let startingScale = targetOptions.imageSize || 1;
+    let startingScale = targetOptions.imageSize ?? 1;
     let imageScaleWrapper = build_token_image_scale_input(startingScale, false, function (imageSize) {
         customization.setTokenOption("imageSize", imageSize);
         persist_token_customization(customization);
@@ -2933,21 +3043,34 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
     });
     inputWrapper.append(imageScaleWrapper);
 
-    let startingOffsetX = targetOptions.offset?.x || 0;
+    let startingOffsetX = targetOptions.offset?.x ?? 0;
     let offsetXWrapper = build_token_num_input(startingOffsetX, false, 'Image Offset X', "", "", 1, function (offsetX) {
-
-        if(targetOptions.offset == undefined)
-            customization.setTokenOption('offset', {x: 0, y: 0})
+        const selectedTokenImage = $('.example-token.selected .div-token-image').attr('data-src');
+        const options = customization.tokenOptions;
+        if(selectedTokenImage){
+            options.alternativeImagesCustomizations = options.alternativeImagesCustomizations ?? {}
+            options.alternativeImagesCustomizations[selectedTokenImage] = options.alternativeImagesCustomizations[selectedTokenImage] ?? {}
+            options.alternativeImagesCustomizations[selectedTokenImage].offset = options.alternativeImagesCustomizations[selectedTokenImage].offset ?? {x: 0, y: 0}
+        } else{
+            options.offset = options.offset ?? {x: 0, y: 0}
+        }
         customization.setTokenOption('offset.x', offsetX)
         persist_token_customization(customization);
         decorate_modal_images(sidebarPanel, listItem, placedToken);
     });
     inputWrapper.append(offsetXWrapper);
 
-    let startingOffsetY = targetOptions.offset?.y || 0;
+    let startingOffsetY = targetOptions.offset?.y ?? 0;
     let offsetYWrapper = build_token_num_input(startingOffsetY, false, 'Image Offset Y', "", "", 1, function (offsetY) {
-        if(targetOptions.offset == undefined)
-            customization.setTokenOption('offset', {x: 0, y: 0})
+        const selectedTokenImage = $('.example-token.selected .div-token-image').attr('data-src');
+        const options = customization.tokenOptions;
+        if(selectedTokenImage){
+            options.alternativeImagesCustomizations = options.alternativeImagesCustomizations ?? {}
+            options.alternativeImagesCustomizations[selectedTokenImage] = options.alternativeImagesCustomizations[selectedTokenImage] ?? {}
+            options.alternativeImagesCustomizations[selectedTokenImage].offset = options.alternativeImagesCustomizations[selectedTokenImage].offset ?? {x: 0, y: 0}
+        } else{
+            options.offset = options.offset ?? {x: 0, y: 0}
+        }
         customization.setTokenOption('offset.y', offsetY)
         persist_token_customization(customization);
         decorate_modal_images(sidebarPanel, listItem, placedToken);
@@ -2955,7 +3078,7 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
     inputWrapper.append(offsetYWrapper);
 
 
-    let startingImageZoom = targetOptions.imageZoom || 0;
+    let startingImageZoom = targetOptions.imageZoom ?? 0;
     let imageZoomWrapper = build_token_num_input(startingImageZoom, false, 'Image Zoom %', -100, '', 5, function (imageZoom) { 
         customization.setTokenOption("imageZoom", imageZoom);
         persist_token_customization(customization);
@@ -2963,7 +3086,7 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
     });
     inputWrapper.append(imageZoomWrapper);
 
-    let startingTokenFlip = targetOptions.tokenFlip || 0;
+    let startingTokenFlip = targetOptions.tokenFlip ?? 0;
     let tokenFlipWrapper = build_token_flip_input(startingTokenFlip, function (tokenFlip) { 
         customization.setTokenOption("tokenFlip", tokenFlip);
         persist_token_customization(customization);
@@ -2971,7 +3094,7 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
     });
     inputWrapper.append(tokenFlipWrapper);
      
-    let startingOpacity = targetOptions.imageOpacity || 1;
+    let startingOpacity = targetOptions.imageOpacity ?? 1;
     let opacityWrapper = build_token_num_input(startingOpacity, tokens,  'Image Opacity', 0, 1, 0.1, function (opacity) {
         customization.setTokenOption("imageOpacity", opacity);
         persist_token_customization(customization);
@@ -2979,7 +3102,7 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
     });
     inputWrapper.append(opacityWrapper);
 
-    let startingHeading = targetOptions.imageHeading || 0;
+    let startingHeading = targetOptions.imageHeading ?? 0;
     let headingWrapper = build_token_num_input(startingHeading, tokens,  'Image Heading', 0, 360, 1, function (heading) {
         customization.setTokenOption("imageHeading", heading);
         persist_token_customization(customization);
@@ -3059,14 +3182,14 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
         borderColorWrapper.hide();
     }
     //TO DO VISION UPDATE: add detection for pc/monsters
-    if(customization.tokenOptions.devilsight?.feet == undefined){
-        customization.tokenOptions.devilsight = {
+    if(targetOptions.devilsight?.feet == undefined){
+        targetOptions.devilsight = {
             feet: '0',
             color: window.TOKEN_SETTINGS?.devilsight?.color ? window.TOKEN_SETTINGS?.devilsight?.color : 'rgba(142, 142, 142, 1)'
         }
     }
-    if(customization.tokenOptions.truesight?.feet == undefined){
-        customization.tokenOptions.truesight = {
+    if(targetOptions.truesight?.feet == undefined){
+        targetOptions.truesight = {
             feet: '0',
             color: window.TOKEN_SETTINGS?.truesight?.color ? window.TOKEN_SETTINGS?.truesight?.color : 'rgba(142, 142, 142, 1)'
         }
@@ -3078,11 +3201,7 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
     }
     if(listItem.isTypePC()){
         let pcData = find_pc_by_player_id(listItem.id);
-        let vision = {
-            darkvision: 0,
-            devilsight: 0,
-            truesight: 0
-        }
+
         if(pcData.senses.length > 0)
         {
             const pcSenses = {
@@ -3099,64 +3218,52 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
                     vision[pcSenses[name]] = range;
             }
         }
-        customization.tokenOptions.vision = {
-            feet: vision.darkvision.toString(),
-            color: window.TOKEN_SETTINGS?.vision?.color ? window.TOKEN_SETTINGS?.vision?.color : 'rgba(142, 142, 142, 1)'
-        }
-        customization.tokenOptions.truesight = {
-            feet: vision.truesight.toString(),
-            color: (window.TOKEN_SETTINGS?.truesight?.color) ? window.TOKEN_SETTINGS.truesight.color : 'rgba(142, 142, 142, 1)'
-        }
-        customization.tokenOptions.devilsight = {
-            feet: vision.devilsight.toString(),
-            color: (window.TOKEN_SETTINGS?.devilsight?.color) ? window.TOKEN_SETTINGS.devilsight.color : 'rgba(142, 142, 142, 1)'
-        }
     }
     else if(listItem.isTypeMonster() || listItem.isTypeOpen5eMonster()){
         vision = get_monster_senses(listItem.monsterData.senses);
     }
-    if(customization.tokenOptions.vision?.feet == undefined){
-        customization.tokenOptions.vision = {
+    if(targetOptions.vision?.feet == undefined){
+        targetOptions.vision = {
             feet: vision.darkvision.toString(),
             color: window.TOKEN_SETTINGS?.vision?.color ? window.TOKEN_SETTINGS?.vision?.color : 'rgba(142, 142, 142, 1)'
         }
     }
-    if(customization.tokenOptions.truesight?.feet == undefined){
-        customization.tokenOptions.truesight = {
+    if(targetOptions.truesight?.feet == undefined){
+        targetOptions.truesight = {
             feet: vision.truesight.toString(),
             color: (window.TOKEN_SETTINGS?.truesight?.color) ? window.TOKEN_SETTINGS.truesight.color : 'rgba(142, 142, 142, 1)'
         }
     }
-    if(customization.tokenOptions.devilsight?.feet == undefined){
+    if(targetOptions.devilsight?.feet == undefined){
 
-        customization.tokenOptions.devilsight = {
+        targetOptions.devilsight = {
             feet: vision.devilsight.toString(),
             color: (window.TOKEN_SETTINGS?.devilsight?.color) ? window.TOKEN_SETTINGS.devilsight.color : 'rgba(142, 142, 142, 1)'
         }
     }
-    if(customization.tokenOptions.light1?.feet == undefined){
-        customization.tokenOptions.light1 = {
+    if(targetOptions.light1?.feet == undefined){
+        targetOptions.light1 = {
             feet: '0',
             color: window.TOKEN_SETTINGS?.light1?.color ? window.TOKEN_SETTINGS?.light1?.color : 'rgba(255, 255, 255, 1)'
         }
     }
-    if(customization.tokenOptions.light2?.feet == undefined){
-        customization.tokenOptions.light2 = {
+    if(targetOptions.light2?.feet == undefined){
+        targetOptions.light2 = {
             feet: '0',
             color: window.TOKEN_SETTINGS?.light2?.color ? window.TOKEN_SETTINGS?.light2?.color : 'rgba(142, 142, 142, 1)'
         }
     }
 
-    const uniqueDevilsightFeet = customization.tokenOptions.devilsight.feet;
-    const uniqueDevilsightColor = customization.tokenOptions.devilsight.color;
-    const uniqueTruesightFeet = customization.tokenOptions.truesight.feet;
-    const uniqueTruesightColor = customization.tokenOptions.truesight.color;
-    const uniqueVisionFeet = customization.tokenOptions.vision.feet;
-    const uniqueVisionColor = customization.tokenOptions.vision.color;
-    const uniqueLight1Feet = customization.tokenOptions.light1.feet;
-    const uniqueLight2Feet = customization.tokenOptions.light2.feet;
-    const uniqueLight1Color = customization.tokenOptions.light1.color;
-    const uniqueLight2Color = customization.tokenOptions.light2.color;
+    const uniqueDevilsightFeet = targetOptions.devilsight.feet;
+    const uniqueDevilsightColor = targetOptions.devilsight.color;
+    const uniqueTruesightFeet = targetOptions.truesight.feet;
+    const uniqueTruesightColor = targetOptions.truesight.color;
+    const uniqueVisionFeet = targetOptions.vision.feet;
+    const uniqueVisionColor = targetOptions.vision.color;
+    const uniqueLight1Feet = targetOptions.light1.feet;
+    const uniqueLight2Feet = targetOptions.light2.feet;
+    const uniqueLight1Color = targetOptions.light1.color;
+    const uniqueLight2Color = targetOptions.light2.color;
 
     const lightOption = {
     name: "auraislight",
@@ -3168,7 +3275,7 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
     ],
     defaultValue: false
     };
-    let auraIsLightEnabled = (customization.tokenOptions.auraislight != undefined) ? customization.tokenOptions.auraislight : true;
+    let auraIsLightEnabled = (targetOptions.auraislight != undefined) ? targetOptions.auraislight : true;
     let enabledLightInput = build_toggle_input( lightOption, auraIsLightEnabled, function(name, newValue) {
         console.log(`${name} setting is now ${newValue}`);
         customization.setTokenOption("auraislight", newValue);
@@ -3253,7 +3360,7 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
         ],
         defaultValue: false
     };
-    let auraRevealVisionEnabled = (customization.tokenOptions.share_vision != undefined) ? customization.tokenOptions.share_vision : false;
+    let auraRevealVisionEnabled = (targetOptions.share_vision != undefined) ? targetOptions.share_vision : false;
     for(let i=0; i<window.playerUsers.length; i++){
         if(!revealvisionOption.options.some(d => d.value == window.playerUsers[i].userId)){
             let option = {value: window.playerUsers[i].userId, label: window.playerUsers[i].userName, desciption: `Token vision is shared with ${window.playerUsers[i].userName}`};
@@ -3295,24 +3402,24 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
     });
 
 
-    if(customization.tokenOptions.aura1?.feet == undefined){
-        customization.tokenOptions.aura1 = {
+    if(targetOptions.aura1?.feet == undefined){
+        targetOptions.aura1 = {
             feet: '0',
             color: window.TOKEN_SETTINGS?.aura1?.color ? window.TOKEN_SETTINGS?.aura1?.color : 'rgba(255, 255, 100, 0.5)'
         }
     }
-    if(customization.tokenOptions.aura2?.feet == undefined){
-        customization.tokenOptions.aura2 = {
+    if(targetOptions.aura2?.feet == undefined){
+        targetOptions.aura2 = {
             feet: '0',
             color: window.TOKEN_SETTINGS?.aura2?.color ? window.TOKEN_SETTINGS?.aura2?.color : 'rgba(255, 255, 100, 0.5)'
         }
     }
 
 
-    let uniqueAura1Feet = customization.tokenOptions.aura1.feet;
-    let uniqueAura2Feet = customization.tokenOptions.aura2.feet;
-    let uniqueAura1Color = customization.tokenOptions.aura1.color;
-    let uniqueAura2Color = customization.tokenOptions.aura2.color;
+    let uniqueAura1Feet = targetOptions.aura1.feet;
+    let uniqueAura2Feet = targetOptions.aura2.feet;
+    let uniqueAura1Color = targetOptions.aura1.color;
+    let uniqueAura2Color = targetOptions.aura2.color;
 
     const auraOption = {
         name: "auraVisible",
@@ -3324,7 +3431,7 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
         ],
         defaultValue: false
     };
-    let auraIsEnabled = (customization.tokenOptions.auraVisible != undefined) ? customization.tokenOptions.auraVisible : false;
+    let auraIsEnabled = (targetOptions.auraVisible != undefined) ? targetOptions.auraVisible : false;
     let enabledAuraInput = build_toggle_input( auraOption, auraIsEnabled, function(name, newValue) {
         console.log(`${name} setting is now ${newValue}`);
         customization.setTokenOption("auraVisible", newValue);
@@ -3431,10 +3538,12 @@ function display_aoe_token_configuration_modal(listItem, placedToken = undefined
         customization.setTokenOption('vision.color', `rgba(${visionInput._r}, ${visionInput._g}, ${visionInput._b}, ${visionInput._a})`);
         customization.setTokenOption(`light1.color`, `rgba(${light1Input._r}, ${light1Input._g}, ${light1Input._b}, ${light1Input._a})`);
         customization.setTokenOption(`light2.color`, `rgba(${light2Input._r}, ${light2Input._g}, ${light2Input._b}, ${light2Input._a})`);
-
+        if(customization.tokenOptions.includeDDB == null)
+            delete customization.tokenOptions.includeDDB 
         persist_token_customization(customization);
         redraw_settings_panel_token_examples(customization.tokenOptions);
-        decorate_modal_images(sidebarPanel, listItem, placedToken);
+        const selectedTokenImage = $('.example-token.selected .div-token-image').attr('data-src');
+        redraw_token_images_in_modal(sidebarPanel, listItem, placedToken, undefined, selectedTokenImage);
     });
 
     inputWrapper.append(tokenOptionsButton);
@@ -3503,7 +3612,10 @@ function build_override_token_options_button(sidebarPanel, listItem, placedToken
     tokenOptionsButton.on("click", function (clickEvent) {
 
         build_and_display_sidebar_flyout(clickEvent.clientY, function (flyout) {
-            const options = find_token_customization(listItem.type, listItem.id)?.tokenOptions;
+            let options = find_token_options_for_list_item(listItem);
+            const selectedTokenImage = $('.example-token.selected .div-token-image').attr('data-src');
+            if(selectedTokenImage)
+                options = {...options, ...options.alternativeImagesCustomizations[selectedTokenImage]}
             const overrideOptions = listItem.isTypeAoe() ? 
                 token_setting_options().filter(option=> availableToAoe.includes(option.name))
                  .map(option => convert_option_to_override_dropdown(option)) 
@@ -3578,8 +3690,8 @@ function display_builtin_token_details_modal(listItem, placedToken) {
 }
 
 function build_token_div_for_sidebar_modal(imageUrl, listItem, placedToken) {
-    let parsedImage = parse_img(imageUrl);
     let options = find_token_options_for_list_item(listItem);
+    let parsedImage = parse_img(imageUrl);
     if (placedToken) {
         options = {...placedToken.options};
     }
@@ -3597,8 +3709,46 @@ function build_token_div_for_sidebar_modal(imageUrl, listItem, placedToken) {
     set_list_item_identifier(tokenDiv, listItem);
     enable_draggable_token_creation(tokenDiv, parsedImage);
     return tokenDiv;
-}
 
+}
+function includeDDBImages(alternativeImages = [], listItem, options) {
+    if (!listItem?.isTypeMonster() || !options) {
+        return alternativeImages;
+    }
+
+    const includeDDB = options.includeDDB;
+    const { largeAvatarUrl: fullImage, avatarUrl: avatarImage } = listItem.monsterData ?? {};
+    if(includeDDB)
+        alternativeImages = alternativeImages.filter(image => image != fullImage && image != avatarImage);
+    const pushUniqueImage = (image) => {
+        if (image && !alternativeImages.includes(image)) {
+            alternativeImages.push(image);
+        }
+    };
+    listItem.image = avatarImage;
+    switch (includeDDB) {
+        case "fullAvatarImage":
+            pushUniqueImage(fullImage);
+            pushUniqueImage(avatarImage);
+            break;
+        case "fullImage":
+            if (fullImage) {
+                if (alternativeImages.length === 0) {
+                    listItem.image = fullImage;
+                } else {
+                    pushUniqueImage(fullImage);
+                }
+            }
+            break;
+        case "avatarImage":
+            if (alternativeImages.length > 0) {
+                pushUniqueImage(avatarImage);
+            }
+            break;
+    }
+    return alternativeImages;
+    
+}
 /**
  * Clears the body of the given sidebarPanel and adds a new element for every alternative image the listItem has
  * @param sidebarPanel {SidebarPanel} the modal to display objects in
@@ -3634,7 +3784,8 @@ function redraw_token_images_in_modal(sidebarPanel, listItem, placedToken, drawI
         alternativeImages = alternativeImages.concat(placedToken.options.alternativeImages);
     }
     alternativeImages = alternativeImages.concat(alternative_images_for_item(listItem).map(image => parse_img(image)));
-
+    const customization = find_token_customization(listItem.type, listItem.id);
+    const defaultImage = customization?.tokenOptions?.defaultImage;
     let placedImg = parse_img(placedToken?.options?.imgsrc);
     if (placedImg.length > 0 && !alternativeImages.includes(placedImg)) {
         // the placedToken image has been changed by the user so put it at the front
@@ -3642,8 +3793,11 @@ function redraw_token_images_in_modal(sidebarPanel, listItem, placedToken, drawI
         tokenDiv.attr("data-token-id", placedToken.options.id);
         if((currentlySelectedToken != undefined && tokenDiv.find('.div-token-image')?.attr('src') == currentlySelectedToken) || (selectedTokenImage != undefined && tokenDiv.find('.div-token-image')?.attr('src') == selectedTokenImage))
             tokenDiv.toggleClass('selected', true);
+        if(defaultImage != undefined && defaultImage == placedImg)
+            tokenDiv.toggleClass('default-token-image');
         modalBody.append(tokenDiv);
     }
+
 
     if (alternativeImages.length === 0 && placedImg !== parse_img(listItem?.image)) {
         // if we don't have any alternative images, show the default image
@@ -3672,6 +3826,8 @@ function redraw_token_images_in_modal(sidebarPanel, listItem, placedToken, drawI
                     let tokenDiv = build_token_div_for_sidebar_modal(alternativeImages[index], listItem, placedToken);
                     if((currentlySelectedToken != undefined && tokenDiv.find('.div-token-image')?.attr('src') == currentlySelectedToken) || (selectedTokenImage != undefined && tokenDiv.find('.div-token-image')?.attr('src') == selectedTokenImage))
                         tokenDiv.toggleClass('selected', true);
+                    if(defaultImage != undefined && defaultImage == alternativeImages[index])
+                        tokenDiv.toggleClass('default-token-image');
                     modalBody.append(tokenDiv);
                     index++;
                 }
@@ -3693,6 +3849,8 @@ function redraw_token_images_in_modal(sidebarPanel, listItem, placedToken, drawI
     for (let i = 0; i < alternativeImages.length; i++) {
         if (drawInline) {
             let tokenDiv = build_token_div_for_sidebar_modal(alternativeImages[i], listItem, placedToken);
+            if(defaultImage != undefined && defaultImage == alternativeImages[i])
+                tokenDiv.toggleClass('default-token-image');
             modalBody.append(tokenDiv);
         } else {
             if(i<13){
@@ -4139,13 +4297,15 @@ function display_monster_filter_modal() {
         console.group("observe_filters")
         let mutation_target = $(event.target).contents()[0];
         let mutation_config = { attributes: false, childList: true, characterData: false, subtree: true };
-
-        let filter_observer = new MutationObserver(function() {
+        if(window.filter_observer)
+            window.filter_observer.disconnect();
+        window.filter_observer = new MutationObserver(function() {
             let filterButton = $(event.target).contents().find(".monster-listing__header button");
             let monsterListing = $(event.target).contents().find(".qa-monster-filters:not('above-loaded')")
             if (filterButton.length > 0 || monsterListing.length>0){
                 filter_observer.disconnect();
-                $(event.target).contents().find("head").append(
+                const contents = $(event.target).contents();
+                contents.find("head").append(
                 `<style>
                     .input-select .input-select__dropdown-wrapper {
                         transition: max-height 0.5s ease 0.1s;
@@ -4165,12 +4325,12 @@ function display_monster_filter_modal() {
                     }
                 </style>`
                 );
-                $(event.target).contents().find("body").addClass("prevent-sidebar-modal-close");
+                contents.find("body").addClass("prevent-sidebar-modal-close");
 
-                $(event.target).contents().find(".monster-listing__header button").click();
-                $(event.target).contents().find('.qa-monster-filters').toggleClass('above-loaded', true);
-                $(event.target).contents().find(".popup-overlay").css("background", "rgb(235, 241, 245)");
-                $(event.target).contents().find(".popup-content").css({
+                contents.find(".monster-listing__header button").click();
+                contents.find('.qa-monster-filters').toggleClass('above-loaded', true);
+                contents.find(".popup-overlay").css("background", "rgb(235, 241, 245)");
+                contents.find(".popup-content").css({
                     "width": "100%",
                     "height": "100%",
                     "max-width": "100%",
@@ -4187,8 +4347,112 @@ function display_monster_filter_modal() {
                         <path class="svg-center" d="M10.9545457,13.4909096 L8.00000021,11.2727278 C7.5983384,10.9714815 7.0285184,11.0528842 6.72727294,11.454546 C6.42602658,11.8562078 6.5074293,12.4260278 6.90909113,12.7272733 L11.227273,15.9636369 L17.2363639,8.95454602 C17.562714,8.57296782 17.5179421,7.99908236 17.136364,7.67272782 C16.7547858,7.34637782 16.1809003,7.39114963 15.8545458,7.77272782 L10.9545457,13.4909096 Z"></path>
                     </svg>
                     <span class="input-checkbox__text">Only show monsters I have access to</span>
-                </label>`).insertAfter($(event.target).contents().find(".qa-monster-filters_remember"));
+                </label>`).insertAfter(contents.find(".qa-monster-filters_remember"));
+                
+                const savedSourceCategories = localStorage.getItem(`${gameId}-sourceCategoryMonsterFilter`) != null ? JSON.parse(localStorage.getItem(`${gameId}-sourceCategoryMonsterFilter`)) : [];
+                
+                const createDropdownOption = function(name, value){
+                    return $(`<li aria-selected="false" class="input-select__dropdown-option" role="option">
+                        <label class="input-checkbox input-checkbox-label qa-input-checkbox_label input-select__dropdown-option-input-checkbox">
+                            <input class="input-checkbox__input qa-input-checkbox_input" tabindex="0" value="${value}" type="checkbox" ${savedSourceCategories.includes(`${value}`) ? 'checked': ''}>
+                            <div class="input-checkbox__focus-indicator"></div>
+                            <svg class="input-checkbox__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" overflow="visible" focusable="false">
+                                <path class="svg-border" d="M5.63636382,2.00000055 C3.62805456,2.00000064 2,3.62805509 2,5.63636419 C2,5.63636419 2,9.87878843 2,18.3636369 C1.9999997,20.3719455 3.62805456,22 5.63636367,22 L18.3636365,22 C20.3719454,22.0000001 22,20.3719455 22,18.3636364 L22,5.63636364 C22,3.62805455 20.3719454,2 18.3636363,2 L5.63636382,2.00000055 Z M19,17.25 C19,18.2164987 18.2164979,19 17.25,19 L6.75000007,19 C5.78350125,19 5,18.2164979 5,17.25 C5,17.25 5,17.25 5,17.25 L5,6.74999977 L5,6.75000003 C4.99999985,5.78350126 5.78350125,5 6.74999999,5 L17.2499999,5 C18.2164986,4.99999996 18.9999998,5.78350126 18.9999998,6.75000003 L19,17.25 Z"></path>
+                                <path class="svg-center" d="M10.9545457,13.4909096 L8.00000021,11.2727278 C7.5983384,10.9714815 7.0285184,11.0528842 6.72727294,11.454546 C6.42602658,11.8562078 6.5074293,12.4260278 6.90909113,12.7272733 L11.227273,15.9636369 L17.2363639,8.95454602 C17.562714,8.57296782 17.5179421,7.99908236 17.136364,7.67272782 C16.7547858,7.34637782 16.1809003,7.39114963 15.8545458,7.77272782 L10.9545457,13.4909096 Z"></path>
+                            </svg>
+                            <span class="input-checkbox__text">${name}</span>
+                        </label>
+                    </li>`)
+                }
+
+                const dropdownFilter = $(`<div class="input-select qa-input-select-dropdown qa-monster-filters_source_category input-select--list input-select--multi">
+                                            <div aria-haspopup="true" class="input-select__button qa-input-select-dropdown_button" type="button" role="button" tabindex="0">
+                                                <div class="input-select__button-text"><span style="flex: 1 1 0%; text-align: start;"><span style="flex: 1 1 0%; text-align: start;">Source Category</span></span></div>
+                                                <div class="input-select__button-icon">
+                                                    <svg class="" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" overflow="visible">
+                                                        <path d="M 0 25 L 50 75 L 100 25" stroke-width="15" fill="none"></path>
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                            <input class="input-select__input-cache qa-input-select-dropdown_input-cache" title="Search Source Category Options" type="text" value="">
+                                            <div aria-hidden="true" class="input-select__dropdown-wrapper">
+                                                <ul class="input-select__dropdown" role="listbox">
+                                                   
+                                                </ul>
+                                            </div>
+                                        </div>`);
+                const sourceCategories = window.ddbConfigJson.sourceCategories;
+                const list = dropdownFilter.find('ul.input-select__dropdown[role="listbox"]')
+                for (const category of sourceCategories){
+                    if((!category.isEnabledByDefault && category.name != "Subscriber Content") || category.name == "Internal")
+                        continue;
+                    const option = createDropdownOption(category.name, category.id);
+                    list.append(option);
+                }
+                list.find('li').sort(function(a,b){
+                    return $(a).find('.input-checkbox__text').text().localeCompare($(b).find('.input-checkbox__text').text(), "en", { sensitivity: 'base' });
+                }).appendTo(list);
+                const sourceDropdown = contents.find('.monster-filters>.input-select:nth-of-type(2)');
+                sourceDropdown.after(dropdownFilter);
+
+                dropdownFilter.find('.qa-input-select-dropdown_input-cache').off('input.search').on('input.search', function(e) {
+                    const query = e.target.value.toLowerCase();
+                    const listItems = list.find('li')
+                    listItems.filter(function() {
+                        const text = $(this).find('.input-checkbox__text').text().toLowerCase();
+                        $(this).toggle(text.trim() == '' || text.indexOf(query) > -1);
+                    });
+                });
+                dropdownFilter.off('pointerdown.open').on('pointerdown.open', (e)=>{
+                    const target = $(e.target);
+                    if(target.closest('.input-select__clear-button').length>0) return;
                     
+                    if(target.closest('.input-select__button-icon').length>0){
+                        dropdownFilter.toggleClass('is-open');
+                    } else{
+                        dropdownFilter.addClass('is-open');
+                    }
+                    const filterBody = contents.find('body');
+                    if(dropdownFilter.hasClass('is-open')){
+                        
+                        filterBody.off('click.closeFilter').on('click.closeFilter', function(e){
+                            if($(e.target).closest('.qa-monster-filters_source_category').length>0){
+                                return;
+                            }
+                            dropdownFilter.removeClass('is-open');
+                            filterBody.off('click.closeFilter');
+                        })
+                    } else{
+                        filterBody.off('click.closeFilter');
+                    }
+                   
+                })
+                const setNumberOfFilterText = function(filter, filterName){
+                    const numberOfChecked = filter.find(".input-select__dropdown input:checked").length;
+                    
+                    filter.find('.input-select__button-text-count').remove();
+                    filter.find('.input-select__clear-button').remove();
+                    if(numberOfChecked == 0) return;
+                    
+
+                    const textCount = $(`<span aria-label="${numberOfChecked} selected" class="input-select__button-text-count">(${numberOfChecked})</span>`)
+                    filter.find('.input-select__button-text>span').append(textCount);
+
+                    const clearButton = $(`<button class="input-select__clear-button qa-input-select-dropdown_clear-button" title="Clear ${filterName}" type="button"><svg class="" xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><g transform="rotate(-45 50 50)"><rect x="0" y="40" width="100" height="20"></rect></g><g transform="rotate(45 50 50)"><rect x="0" y="40" width="100" height="20"></rect></g></svg></button>`)
+                    clearButton.off('pointerdown.clearFilter').on('pointerdown.clearFilter', (e) =>{
+                        filter.find(".input-select__dropdown input:checked").prop("checked", false);
+                        filter.find('.input-select__button-text-count').remove();
+                        filter.find('.input-select__clear-button').remove();
+                    })    
+                    filter.find('.input-select__button-text').append(clearButton);
+                }
+                dropdownFilter.off('input.showNumber').on('input.showNumber', 'input[type="checkbox"]', function(){
+                    setNumberOfFilterText(dropdownFilter, "Source Category");
+                })
+                setNumberOfFilterText(dropdownFilter, "Source Category");
+                dropdownFilter.off('blur.close').on('blur.close', (e)=>{
+                    dropdownFilter.removeClass('is-open');
+                })
                 let closeButton = build_close_button();
                 closeButton.css({
                     "position": "absolute",
@@ -4200,13 +4464,13 @@ function display_monster_filter_modal() {
                     clickEvent.stopPropagation();
                     close_monster_filter_iframe();
                 });
-                $(event.target).contents().find(".qa-monster-filters").prepend(closeButton);
+                contents.find(".qa-monster-filters").prepend(closeButton);
 
                 tokensPanel.remove_sidebar_loading_indicator();
                 iframe.css({ "z-index": 10 });
             }
         });
-        filter_observer.observe(mutation_target,mutation_config);
+        window.filter_observer.observe(mutation_target,mutation_config);
         console.groupEnd()
     });
     iframe.attr("src", `https://www.dndbeyond.com/encounter-builder`);
@@ -4216,11 +4480,18 @@ function display_monster_filter_modal() {
 function close_monster_filter_iframe() {
     let sidebarMonsterFilter = $("#monster-filter-iframe");
     let ownedFilter = sidebarMonsterFilter.contents().find('.qa-monster-filters_accessible-content input')[0]?.checked 
+    const checkedSourceCategories = sidebarMonsterFilter.contents().find('.qa-monster-filters_source_category input[type="checkbox"]:checked').map(function() {
+            return $(this).val();
+        }).get();
+    
    
     if(localStorage.getItem('DDBEB-monster-filters') != null) {
         // the user has the "remember filters" option checked... let's grab our data and move on
-        if(ownedFilter != undefined)
+        if(ownedFilter != undefined)      
             localStorage.setItem(`${gameId}-ownedMonsterFilter`, ownedFilter);
+        if(checkedSourceCategories != undefined)
+            localStorage.setItem(`${gameId}-sourceCategoryMonsterFilter`, JSON.stringify(checkedSourceCategories))
+   
         read_local_monster_search_filters();
         sidebarMonsterFilter.remove();
         tokensPanel.remove_sidebar_loading_indicator(); // if the user double clicks, we might remove iframe before dismissing the loading indicator
@@ -4233,8 +4504,10 @@ function close_monster_filter_iframe() {
         rememberButton.click();
         setTimeout(function() { // make sure we let the "remember filter" click propagate before we harvest that data
             read_local_monster_search_filters();
-            localStorage.removeItem(`${gameId}-ownedMonsterFilter`, ownedFilter);
+            localStorage.removeItem(`${gameId}-ownedMonsterFilter`);
+            localStorage.removeItem(`${gameId}-sourceCategoryMonsterFilter`)
             window.ownedMonstersOnly = ownedFilter; 
+            window.sourceCategoryMonsterFilter = checkedSourceCategories?.length>0 ? checkedSourceCategories : [];
             rememberButton.click();
             sidebarMonsterFilter.remove();
             tokensPanel.remove_sidebar_loading_indicator(); // if the user double clicks, we might remove iframe before dismissing the loading indicator
@@ -4250,6 +4523,8 @@ function read_local_monster_search_filters() {
         monster_search_filters = $.parseJSON(localStorage.getItem('DDBEB-monster-filters'))    
         if(localStorage.getItem(`${gameId}-ownedMonsterFilter`) != 'undefined' && $.parseJSON(localStorage.getItem(`${gameId}-ownedMonsterFilter`)) != null)
             window.ownedMonstersOnly = $.parseJSON(localStorage.getItem(`${gameId}-ownedMonsterFilter`));
+        if(localStorage.getItem(`${gameId}-sourceCategoryMonsterFilter`) != 'undefined' && JSON.parse(localStorage.getItem(`${gameId}-sourceCategoryMonsterFilter`)) != null)
+            window.sourceCategoryMonsterFilter = JSON.parse(localStorage.getItem(`${gameId}-sourceCategoryMonsterFilter`));
     } else {
         monster_search_filters = {};
     }
@@ -4284,15 +4559,17 @@ function register_custom_token_image_context_menu() {
         selector: ".custom-token-image-item, #token-change-image-modal .example-token",
         build: function(element, e) {
             let items = {};
-            let foundElement = find_sidebar_list_item(element)
-            let tokenChangeImage = element.parents().find('#token-change-image-modal').length>0
+            let itemToPlace = find_sidebar_list_item(element)
+            let tokenChangeImage = element.parents().find('#token-change-image-modal').length>0;
             if (!element.hasClass("change-token-image-item") && !tokenChangeImage) {
+                const rootId = RootFolder.allValues().find(d => itemToPlace.folderPath.includes(d.path) && d.name !='')?.id;
+                const tokenCustomization = find_or_create_token_customization(itemToPlace.type, itemToPlace.id, itemToPlace.parentId, rootId);
+                const defaultImage = tokenCustomization?.tokenOptions?.defaultImage;
+                const imgSrc = element.find(".token-image").attr("data-src");
                 items.place = {
                     name: "Place Token",
                     callback: function (itemKey, opt, originalEvent) {
-                        let itemToPlace = find_sidebar_list_item(opt.$trigger);
                         let specificImage = undefined;
-                        let imgSrc = opt.$trigger.find(".token-image").attr("data-src");
                         if (imgSrc !== undefined && imgSrc.length > 0) {
                             specificImage = imgSrc;
                         }
@@ -4302,15 +4579,39 @@ function register_custom_token_image_context_menu() {
                 items.placeHidden = {
                     name: "Place Hidden Token",
                     callback: function (itemKey, opt, originalEvent) {
-                        let itemToPlace = find_sidebar_list_item(opt.$trigger);
                         let specificImage = undefined;
-                        let imgSrc = opt.$trigger.find(".token-image").attr("data-src");
                         if (imgSrc !== undefined && imgSrc.length > 0) {
                             specificImage = imgSrc;
                         }
                         create_and_place_token(itemToPlace, true, specificImage);
                     }
                 };
+                
+                const alternativeImages = alternative_images_for_item(itemToPlace);
+                if(alternativeImages?.length>1){
+                    items.setAsDefault = {
+                        name: defaultImage == imgSrc ? "Disable Default Image" : "Set as Default Image",
+                        callback: function (itemKey, opt, originalEvent) {
+                            let specificImage = undefined;
+                            const currentDefault = $('.default-token-image');
+                            currentDefault.addClass('removeTransition');
+                            currentDefault.removeClass('default-token-image');
+                            if (defaultImage != imgSrc && imgSrc !== undefined && imgSrc.length > 0) {
+                                tokenCustomization.tokenOptions.defaultImage = imgSrc;
+                                opt.$trigger.addClass('default-token-image');
+                            } else{
+                                delete tokenCustomization.tokenOptions.defaultImage
+                            }
+                            setTimeout(function(){
+                                currentDefault.removeClass('removeTransition');
+                            }, 200)
+                            const row = build_sidebar_list_row(itemToPlace);
+                            enable_draggable_token_creation(row);                  
+                            $(`.sidebar-list-item-row[id="${itemToPlace.id}"]`).replaceWith(row);
+                            persist_token_customization(tokenCustomization);
+                        }
+                    };
+                }
             }
             items.copy = {
                 name: "Copy Url",
@@ -4343,7 +4644,7 @@ function register_custom_token_image_context_menu() {
                     window.MB.inject_chat(msgdata)
                 }
             };
-            if (!$('.token-image-modal-url-label-add-wrapper .token-image-modal-footer-title').text().includes('Replace') && !element.hasClass("change-token-image-item") && foundElement?.type !== 'builtinToken' && foundElement?.type !== 'ddbToken') {
+            if (!$('.token-image-modal-url-label-add-wrapper .token-image-modal-footer-title').text().includes('Replace') && !element.hasClass("change-token-image-item") && itemToPlace?.type !== 'builtinToken' && itemToPlace?.type !== 'ddbToken') {
                 items.border = "---";
                 items.remove = {
                     name: "Remove",
@@ -4646,7 +4947,9 @@ function display_change_image_modal(placedToken) {
                                 ...token.options,
                                 ...token.options.alternativeImagesCustomizations[imgSrc],
                             }
-                            const newSize = token.options.tokenSize * hpps
+                            const newSize = token.options.tokenSize 
+                                                ? token.options.tokenSize * hpps 
+                                                : token.options.size ?? hpps ;
                             token.size(newSize);
                         }
                         token.options.imgsrc = imgSrc; 
